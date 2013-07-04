@@ -35,18 +35,6 @@ function attachPreviousEntries(prevEntries, currEntries) {
     });
 }
 
-function filenameMapper(filenamePrefix, filename) {
-    'use strict';
-
-    var fileNameResult = '/';
-    if (filenamePrefix !== '') {
-        fileNameResult = fileNameResult + filenamePrefix + '-' + filename;
-    } else {
-        fileNameResult = fileNameResult + filename;
-    }
-    return fileNameResult;
-}
-
 function createHAR(page, address, title, startTime, resources) {
     'use strict';
     var entries = [],
@@ -142,7 +130,6 @@ var fs = require('fs');
 var startingAddress = null;
 var currentAddress = null;
 var userAgentProfile = null;
-var redirectCount = 0;
 
 var previousEntries     = [];
 var previousPages       = [];
@@ -213,14 +200,11 @@ var renderAndMeasurePage = function(measuredUrl) {
 
     page.open(measuredUrl, function (status) {
         fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
-        console.log('Current status is: ' + status);
 
         if (status !== 'success') {
-            console.log('It may not be a failure, but returned failure anyway! Status: ' + status);
-            phantom.exit(1);
+            console.log("FAILED loading of url: " + startingAddress);
+            phantom.emitData('FAILED');
         } else {
-
-            console.log("Loading done!");
 
             page.endTime = new Date();
             page.title = page.evaluate(function () {
@@ -230,25 +214,11 @@ var renderAndMeasurePage = function(measuredUrl) {
             var resultant = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
             attachPreviousEntries(previousEntries, resultant.log.entries);
             attachPreviousEntries(previousPages, resultant.log.pages);
-
-            previousEntries.sort(function(elem1, elem2) {
-                return elem2.startedDateTime - elem1.startedDateTime;
-            });
-
+            
             resultant.log.entries = previousEntries;
             resultant.log.pages = previousPages;
 
-            var hosts = resultant.urls_for_dns,
-                hostsJson = JSON.stringify(hosts,undefined,4);
-            delete resultant.urls_for_dns;
-                
-            var resultString = JSON.stringify(resultant, undefined, 4);
-
-            console.log(page.title);
-            fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json')   , resultString  , 'w');
-            fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json') , hostsJson     , 'w');
-
-            phantom.exit(0);
+            phantom.emitData(JSON.stringify(resultant, undefined, 4););
         }
     });
 };
