@@ -132,6 +132,7 @@ var userAgentProfile = null;
 
 var previousEntries     = [];
 var previousPages       = [];
+var isRedirect          = false;
 
 var renderAndMeasurePage = function(measuredUrl) {
     'use strict';
@@ -185,39 +186,45 @@ var renderAndMeasurePage = function(measuredUrl) {
 
     page.onNavigationRequested = function(url, type, willNavigate, main) {
         if (main && url !== currentAddress && page.startTime instanceof Date) {
+            isRedirect = true;
             page.endTime = new Date();
-            var resHar = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
-            attachPreviousEntries(previousEntries, resHar.log.entries);
-            attachPreviousEntries(previousPages, resHar.log.pages);
 
             console.log("Redirecting to url: " + url + " from: " + currentAddress);
+            console.log("Redirect type: " + type);
+            console.log("Coming from main? A: " + main);
+
             currentAddress = url;
-            page.close();
-            renderAndMeasurePage(currentAddress);
         }
     };
 
     page.open(measuredUrl, function (status) {
-        fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
-
         if (status !== 'success') {
-            console.log("FAILED loading of url: " + startingAddress);
-            phantom.emitData('FAILED');
-        } else {
 
+            if(isRedirect === false) {
+                console.log("FAILED loading of url: " + startingAddress);
+                phantom.emitData('FAILED');
+            } else {
+                console.log("This is a buggy redirect. Redirecting to page: " + currentAddress);
+                var resHar = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
+                attachPreviousEntries(previousEntries, resHar.log.entries);
+                attachPreviousEntries(previousPages, resHar.log.pages);
+                page.close();
+                renderAndMeasurePage(currentAddress);
+            }
+
+        } else {
+            console.log("Successfully loaded the URL: " + startingAddress);
             page.endTime = new Date();
             page.title = page.evaluate(function () {
                 return document.title;
             });
-            
             var resultant = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
             attachPreviousEntries(previousEntries, resultant.log.entries);
             attachPreviousEntries(previousPages, resultant.log.pages);
 
             resultant.log.entries = previousEntries;
             resultant.log.pages = previousPages;
-
-            phantom.emitData(JSON.stringify(resultant, undefined, 4););
+            phantom.emitData(JSON.stringify(resultant, undefined, 4));
         }
     });
 };
