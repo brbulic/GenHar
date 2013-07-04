@@ -125,7 +125,6 @@ function createHAR(page, address, title, startTime, resources) {
 }
 
 var system = require('system');
-var fs = require('fs');
 
 var startingAddress = null;
 var currentAddress = null;
@@ -214,7 +213,7 @@ var renderAndMeasurePage = function(measuredUrl) {
             var resultant = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
             attachPreviousEntries(previousEntries, resultant.log.entries);
             attachPreviousEntries(previousPages, resultant.log.pages);
-            
+
             resultant.log.entries = previousEntries;
             resultant.log.pages = previousPages;
 
