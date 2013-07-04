@@ -139,10 +139,10 @@ function createHAR(page, address, title, startTime, resources) {
 var system = require('system');
 var fs = require('fs');
 
-var startingAddress = null;
-var currentAddress = null;
-var userAgentProfile = null;
-var redirectCount = 0;
+var startingAddress = null,
+    redirectAddress = null,
+    userAgentProfile = null,
+    isRedirect = null;
 
 var previousEntries     = [];
 var previousPages       = [];
@@ -151,6 +151,7 @@ var renderAndMeasurePage = function(measuredUrl) {
     'use strict';
 
     var page = require('webpage').create();
+    isRedirect = false;
 
     page.address = measuredUrl;
     page.resources = [];
@@ -198,10 +199,11 @@ var renderAndMeasurePage = function(measuredUrl) {
     };
 
     page.onNavigationRequested = function(url, type, willNavigate, main) {
-        if (main && url !== currentAddress && page.startTime instanceof Date) {
+        if (main && url !== page.address && page.startTime instanceof Date) {
             page.endTime = new Date();
-            console.log("Redirecting to url: " + url + " from: " + currentAddress);
-            currentAddress = url;
+            isRedirect = true;
+            console.log("Redirecting to url: " + url + " from: " + page.address);
+            redirectAddress = url;
         }
     };
 
@@ -212,15 +214,14 @@ var renderAndMeasurePage = function(measuredUrl) {
         if (status !== 'success') {
            if(isRedirect === false) {
                 console.log("FAILED loading of url: " + startingAddress);
-                phantom.emitData('FAILED');
                 phantom.exit(1);
             } else {
-                console.log("This is a buggy redirect. Redirecting to page: " + currentAddress);
-                var resHar = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
+                console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
+                var resHar = createHAR(page, page.address, page.title, page.startTime, page.resources);
                 attachPreviousEntries(previousEntries, resHar.log.entries);
                 attachPreviousEntries(previousPages, resHar.log.pages);
                 page.close();
-                renderAndMeasurePage(currentAddress);
+                renderAndMeasurePage(redirectAddress);
             }
         } else {
 
@@ -231,7 +232,7 @@ var renderAndMeasurePage = function(measuredUrl) {
                 return document.title;
             });
             
-            var resultant = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
+            var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
             attachPreviousEntries(previousEntries, resultant.log.entries);
             attachPreviousEntries(previousPages, resultant.log.pages);
 
@@ -275,12 +276,11 @@ if (system.args.length === 1) {
     };
 
     startingAddress = system.args[1];
-    currentAddress = startingAddress;
 
     var argsLength = system.args.length;
     if (argsLength === 3) {
         userAgentProfile = system.args[2];
     }
 
-    renderAndMeasurePage(currentAddress);
+    renderAndMeasurePage(startingAddress);
 }
