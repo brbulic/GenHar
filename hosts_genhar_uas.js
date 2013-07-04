@@ -200,14 +200,8 @@ var renderAndMeasurePage = function(measuredUrl) {
     page.onNavigationRequested = function(url, type, willNavigate, main) {
         if (main && url !== currentAddress && page.startTime instanceof Date) {
             page.endTime = new Date();
-            var resHar = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
-            attachPreviousEntries(previousEntries, resHar.log.entries);
-            attachPreviousEntries(previousPages, resHar.log.pages);
-
             console.log("Redirecting to url: " + url + " from: " + currentAddress);
             currentAddress = url;
-            page.close();
-            renderAndMeasurePage(currentAddress);
         }
     };
 
@@ -216,8 +210,18 @@ var renderAndMeasurePage = function(measuredUrl) {
         console.log('Current status is: ' + status);
 
         if (status !== 'success') {
-            console.log('It may not be a failure, but returned failure anyway! Status: ' + status);
-            phantom.exit(1);
+           if(isRedirect === false) {
+                console.log("FAILED loading of url: " + startingAddress);
+                phantom.emitData('FAILED');
+                phantom.exit(1);
+            } else {
+                console.log("This is a buggy redirect. Redirecting to page: " + currentAddress);
+                var resHar = createHAR(page, currentAddress, page.title, page.startTime, page.resources);
+                attachPreviousEntries(previousEntries, resHar.log.entries);
+                attachPreviousEntries(previousPages, resHar.log.pages);
+                page.close();
+                renderAndMeasurePage(currentAddress);
+            }
         } else {
 
             console.log("Loading done!");
