@@ -39,7 +39,7 @@ function createHAR(page, address, title, startTime, resources) {
     'use strict';
     var entries = [],
         urlArray = [],
-        processedTitle = title.length == 0 ? address : address + ' (' + title + ')';
+        processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
 
     resources.forEach(function (resource) {
         var request = resource.request,
