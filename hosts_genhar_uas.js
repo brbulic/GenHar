@@ -50,7 +50,8 @@ function filenameMapper(filenamePrefix, filename) {
 function createHAR(page, address, title, startTime, resources) {
     'use strict';
     var entries = [],
-        urlArray = [];
+        urlArray = [],
+        processedTitle = title.length == 0 ? address : address + ' (' + title + ')';
 
     resources.forEach(function (resource) {
         var request = resource.request,
@@ -122,7 +123,7 @@ function createHAR(page, address, title, startTime, resources) {
                 {
                     startedDateTime: startTime.toISOString(),
                     id: address,
-                    title: title,
+                    title: processedTitle,
                     pageTimings: {
                         onLoad: page.endTime - page.startTime
                     }
