@@ -213,7 +213,7 @@ var renderAndMeasurePage = function(measuredUrl) {
         console.log('Current status is: ' + status);
 
         if (status !== 'success') {
-           if(isRedirect === false) {
+            if (isRedirect === false) {
                 console.log("FAILED loading of url: " + startingAddress);
                 phantom.exit(1);
             } else {
@@ -232,7 +232,6 @@ var renderAndMeasurePage = function(measuredUrl) {
             page.title = page.evaluate(function () {
                 return document.title;
             });
-            
             var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
             attachPreviousEntries(previousEntries, resultant.log.entries);
             attachPreviousEntries(previousPages, resultant.log.pages);
