@@ -161,6 +161,10 @@ var renderAndMeasurePage = function(measuredUrl) {
         page.settings.userAgent = userAgentProfile;
     }
 
+    page.customHeaders = {
+        'HTTP_X_MARLIN_MOBILE' : page.settings.userAgent
+    };
+
     page.onLoadStarted = function () {
         page.startTime = new Date();
         console.log("Started loading " + measuredUrl);
