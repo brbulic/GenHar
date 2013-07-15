@@ -35,6 +35,38 @@ function attachPreviousEntries(prevEntries, currEntries) {
     });
 }
 
+function propertyExists(stringy) {
+    return (typeof stringy !== 'undefined' && stringy !== null && stringy.length > 0);
+}
+
+function marlinHeadersSetup(userAppConfig) {
+    var finish = [];
+
+    if (propertyExists(userAppConfig.appOS)) {
+        finish.push(userAppConfig.appOS, ' ');
+    }
+    if (propertyExists(userAppConfig.appVersion)) {
+        finish.push(userConfig.appVersion, ' ');
+    }
+    if (propertyExists(userAppConfig.appDate)) {
+        finish.push(userConfig.appDate, ' ');
+    }
+
+    return finish.join('').trim();
+}
+
+function filenameMapper(filenamePrefix, filename) {
+    'use strict';
+
+    var fileNameResult = '/';
+    if (filenamePrefix !== '') {
+        fileNameResult = fileNameResult + filenamePrefix + '-' + filename;
+    } else {
+        fileNameResult = fileNameResult + filename;
+    }
+    return fileNameResult;
+}
+
 function createHAR(page, address, title, startTime, resources) {
     'use strict';
     var entries = [],
@@ -130,6 +162,7 @@ var system = require('system');
 var startingAddress = null,
     redirectAddress = null,
     userAgentProfile = null,
+    userConfig = null,
     isRedirect = null;
 
 var previousEntries     = [];
@@ -149,8 +182,12 @@ var renderAndMeasurePage = function(measuredUrl) {
         page.settings.userAgent = userAgentProfile;
     }
 
-    page.customHeaders = {
-        'HTTP_X_MARLIN_MOBILE' : page.settings.userAgent
+    var result = marlinHeadersSetup(userConfig);
+
+    if (result != null) {
+        page.customHeaders = {
+            'HTTP_X_MARLIN_MOBILE' : result
+        };    
     };
 
     page.onLoadStarted = function () {
@@ -252,7 +289,12 @@ if (system.args.length === 1) {
 
     var argsLength = system.args.length;
     if (argsLength === 3) {
-        userAgentProfile = system.args[2];
+        userConfig = JSON.parse(system.args[2]);
+        if (typeof userConfig.userAgent !== 'undefined') {
+            userAgentProfile = userConfig.userAgent;
+        };
+
+        console.log("I a user config:\n" + system.args[2]);
     }
 
     renderAndMeasurePage(startingAddress);
