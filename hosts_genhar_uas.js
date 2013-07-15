@@ -312,8 +312,6 @@ if (system.args.length === 1) {
         if (typeof userConfig.userAgent !== 'undefined') {
             userAgentProfile = userConfig.userAgent;
         };
-
-        console.log("I a user config:\n" + system.args[2]);
     }
 
     renderAndMeasurePage(startingAddress);
