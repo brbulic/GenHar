@@ -36,7 +36,7 @@ function attachPreviousEntries(prevEntries, currEntries) {
 
 function propertyExists(stringy) {
     "use strict";
-    return (stringy === 'undefined' && stringy !== null && stringy.length > 0);
+    return (stringy !== 'undefined' && stringy !== null && stringy.length > 0);
 }
 
 function marlinHeadersSetup(userAppConfig) {
@@ -89,7 +89,7 @@ function createHAR(page, address, title, startTime, resources) {
                     redirectUrl = element.value;
                 }
             });
-        }
+        }        
 
         urlArray.push(request.url);
         entries.push({
@@ -167,7 +167,7 @@ var startingAddress = null,
     userConfig = null,
     isRedirect = null;
 
-var elementStartedLoadingCount = 0;
+var currentlyLoadingElements = 0;
 var lastElementCount = 0;
 var deltasZeroCount = 0
 
@@ -218,7 +218,7 @@ var renderAndMeasurePage = function (measuredUrl) {
     };
 
     page.onResourceRequested = function (req) {
-      	elementStartedLoadingCount = elementStartedLoadingCount + 1;
+      	currentlyLoadingElements = currentlyLoadingElements + 1;
         page.resources[req.id] = {
             request: req,
             startReply: null,
@@ -232,7 +232,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         }
         if (res.stage === 'end') {        	
             page.resources[res.id].endReply = res;
-            elementStartedLoadingCount = elementStartedLoadingCount - 1;
+            currentlyLoadingElements = currentlyLoadingElements - 1;
         }
     };
 
@@ -271,25 +271,18 @@ var renderAndMeasurePage = function (measuredUrl) {
 
             timer = setInterval(function () {
 
-            	var lastDelta = lastElementCount - elementStartedLoadingCount;
-
-            	console.log("Current living elements: " + elementStartedLoadingCount);
-            	console.log("Loaded in the last second: " + lastDelta);
-
+            	var lastDelta = lastElementCount - currentlyLoadingElements;
             	if (lastDelta === 0) {
             		deltasZeroCount = deltasZeroCount + 1;
             	}
 
-            	lastElementCount = elementStartedLoadingCount;    
+            	lastElementCount = currentlyLoadingElements;    
 
-            	if (elementStartedLoadingCount === 0 || deltasZeroCount > 5) {
+            	if (currentlyLoadingElements === 0 || deltasZeroCount > 5) {
+
             		var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
 	                attachPreviousEntries(previousEntries, resultant.log.entries);
 	                attachPreviousEntries(previousPages, resultant.log.pages);
-
-	                previousEntries.sort(function (elem1, elem2) {
-	                    return elem2.startedDateTime - elem1.startedDateTime;
-	                });
 
 	                resultant.log.entries = previousEntries;
 	                resultant.log.pages = previousPages;
@@ -301,6 +294,7 @@ var renderAndMeasurePage = function (measuredUrl) {
 	                var resultString = JSON.stringify(resultant, undefined, 4);
 
 	                console.log(page.title);
+
 	                fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
 	                fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
 
