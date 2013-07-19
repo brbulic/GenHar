@@ -12,16 +12,15 @@
             }
 
             return this.getFullYear() + '-' +
-            pad(this.getMonth() + 1) + '-' +
-            pad(this.getDate()) + 'T' +
-            pad(this.getHours()) + ':' +
-            pad(this.getMinutes()) + ':' +
-            pad(this.getSeconds()) + '.' +
-            ms(this.getMilliseconds()) + 'Z';
+                pad(this.getMonth() + 1) + '-' +
+                pad(this.getDate()) + 'T' +
+                pad(this.getHours()) + ':' +
+                pad(this.getMinutes()) + ':' +
+                pad(this.getSeconds()) + '.' +
+                ms(this.getMilliseconds()) + 'Z';
         };
     }
 }());
-
 
 function attachPreviousEntries(prevEntries, currEntries) {
     'use strict';
@@ -30,26 +29,28 @@ function attachPreviousEntries(prevEntries, currEntries) {
         return;
     }
 
-    currEntries.forEach(function(obj) {
+    currEntries.forEach(function (obj) {
         prevEntries.push(obj);
     });
 }
 
 function propertyExists(stringy) {
-    return (typeof stringy !== 'undefined' && stringy !== null && stringy.length > 0);
+    "use strict";
+    return (stringy === 'undefined' && stringy !== null && stringy.length > 0);
 }
 
 function marlinHeadersSetup(userAppConfig) {
+    "use strict";
     var finish = [];
 
     if (propertyExists(userAppConfig.appOS)) {
         finish.push(userAppConfig.appOS, ' ');
     }
     if (propertyExists(userAppConfig.appVersion)) {
-        finish.push(userConfig.appVersion, ' ');
+        finish.push(userAppConfig.appVersion, ' ');
     }
     if (propertyExists(userAppConfig.appDate)) {
-        finish.push(userConfig.appDate, ' ');
+        finish.push(userAppConfig.appDate, ' ');
     }
 
     return finish.join('').trim();
@@ -151,8 +152,8 @@ function createHAR(page, address, title, startTime, resources) {
             ],
             entries: entries
         },
-        urls_for_dns : {
-            urlArray : urlArray
+        urls_for_dns: {
+            urlArray: urlArray
         }
     };
 }
@@ -166,13 +167,20 @@ var startingAddress = null,
     userConfig = null,
     isRedirect = null;
 
-var previousEntries     = [];
-var previousPages       = [];
+var elementStartedLoadingCount = 0;
+var lastElementCount = 0;
+var deltasZeroCount = 0
 
-var renderAndMeasurePage = function(measuredUrl) {
+var previousEntries = [];
+var previousPages = [];
+
+var renderAndMeasurePage = function (measuredUrl) {
     'use strict';
 
-    var page = require('webpage').create();
+    var page = require('webpage').create(),
+        timer,
+        result = marlinHeadersSetup(userConfig);
+
     isRedirect = false;
 
     page.address = measuredUrl;
@@ -182,20 +190,18 @@ var renderAndMeasurePage = function(measuredUrl) {
         page.settings.userAgent = userAgentProfile;
     }
 
-    var result = marlinHeadersSetup(userConfig);
-
-    if (result != null) {
+    if (result !== null) {
         page.customHeaders = {
-            'HTTP_X_MARLIN_MOBILE' : result
-        };    
-    };
+            'HTTP_X_MARLIN_MOBILE': result
+        };
+    }
 
     page.onLoadStarted = function () {
         page.startTime = new Date();
         console.log("Started loading " + measuredUrl);
     };
 
-    page.onResourceError = function (resourceError) {
+    page.onResourceError = function (resourceError) {    	
         console.log('Unable to load resource (URL:' + resourceError.url + ')');
         console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
     };
@@ -212,6 +218,7 @@ var renderAndMeasurePage = function(measuredUrl) {
     };
 
     page.onResourceRequested = function (req) {
+      	elementStartedLoadingCount = elementStartedLoadingCount + 1;
         page.resources[req.id] = {
             request: req,
             startReply: null,
@@ -223,12 +230,13 @@ var renderAndMeasurePage = function(measuredUrl) {
         if (res.stage === 'start') {
             page.resources[res.id].startReply = res;
         }
-        if (res.stage === 'end') {
+        if (res.stage === 'end') {        	
             page.resources[res.id].endReply = res;
+            elementStartedLoadingCount = elementStartedLoadingCount - 1;
         }
     };
 
-    page.onNavigationRequested = function(url, type, willNavigate, main) {
+    page.onNavigationRequested = function (url, type, willNavigate, main) {
         if (main && url !== page.address && page.startTime instanceof Date) {
             page.endTime = new Date();
             isRedirect = true;
@@ -255,34 +263,50 @@ var renderAndMeasurePage = function(measuredUrl) {
             }
         } else {
 
-            console.log("Loading done!");
-
+            console.log("Loading done! Waiting for all elements to finish...");
             page.endTime = new Date();
             page.title = page.evaluate(function () {
                 return document.title;
             });
-            var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
-            attachPreviousEntries(previousEntries, resultant.log.entries);
-            attachPreviousEntries(previousPages, resultant.log.pages);
 
-            previousEntries.sort(function(elem1, elem2) {
-                return elem2.startedDateTime - elem1.startedDateTime;
-            });
+            timer = setInterval(function () {
 
-            resultant.log.entries = previousEntries;
-            resultant.log.pages = previousPages;
+            	var lastDelta = lastElementCount - elementStartedLoadingCount;
 
-            var hosts = resultant.urls_for_dns,
-                hostsJson = JSON.stringify(hosts,undefined,4);
-            delete resultant.urls_for_dns;
-                
-            var resultString = JSON.stringify(resultant, undefined, 4);
+            	console.log("Current living elements: " + elementStartedLoadingCount);
+            	console.log("Loaded in the last second: " + lastDelta);
 
-            console.log(page.title);
-            fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json')   , resultString  , 'w');
-            fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json') , hostsJson     , 'w');
+            	if (lastDelta === 0) {
+            		deltasZeroCount = deltasZeroCount + 1;
+            	}
 
-            phantom.exit(0);
+            	lastElementCount = elementStartedLoadingCount;    
+
+            	if (elementStartedLoadingCount === 0 || deltasZeroCount > 5) {
+            		var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
+	                attachPreviousEntries(previousEntries, resultant.log.entries);
+	                attachPreviousEntries(previousPages, resultant.log.pages);
+
+	                previousEntries.sort(function (elem1, elem2) {
+	                    return elem2.startedDateTime - elem1.startedDateTime;
+	                });
+
+	                resultant.log.entries = previousEntries;
+	                resultant.log.pages = previousPages;
+
+	                var hosts = resultant.urls_for_dns,
+	                    hostsJson = JSON.stringify(hosts, undefined, 4);
+	                delete resultant.urls_for_dns;
+
+	                var resultString = JSON.stringify(resultant, undefined, 4);
+
+	                console.log(page.title);
+	                fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
+	                fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
+
+	                phantom.exit(0);
+            	}
+            }, 1000);
         }
     });
 };
@@ -291,12 +315,12 @@ if (system.args.length === 1) {
     console.log('Usage: genhar.js <some URL> [UAS]');
     phantom.exit(1);
 } else {
-    phantom.onError = function(msg, trace) {
+    phantom.onError = function (msg, trace) {
         'use strict';
         var msgStack = ['PHANTOM ERROR: ' + msg];
         if (trace && trace.length) {
             msgStack.push('TRACE:');
-            trace.forEach(function(t) {
+            trace.forEach(function (t) {
                 msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
             });
         }
@@ -309,9 +333,9 @@ if (system.args.length === 1) {
     var argsLength = system.args.length;
     if (argsLength === 3) {
         userConfig = JSON.parse(system.args[2]);
-        if (typeof userConfig.userAgent !== 'undefined') {
+        if (userConfig.userAgent !== 'undefined') {
             userAgentProfile = userConfig.userAgent;
-        };
+        }
     }
 
     renderAndMeasurePage(startingAddress);
