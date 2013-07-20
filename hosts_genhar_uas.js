@@ -89,14 +89,11 @@ function createHAR(page, address, title, startTime, resources) {
                     redirectUrl = element.value;
                 }
             });
-        }        
-
-        var ts = Math.round((new Date(request.time)).getTime() / 1000);
+        }
 
         urlArray.push(request.url);
         entries.push({
             startedDateTime: request.time.toISOString(),
-            unixDateTime: ts,
             time: endReply.time - request.time,
             request: {
                 method: request.method,
@@ -171,7 +168,7 @@ var startingAddress = null,
 
 var currentlyLoadingElements = 0;
 var lastElementCount = 0;
-var deltasZeroCount = 0
+var deltasZeroCount = 0;
 
 var previousEntries = [];
 var previousPages = [];
@@ -180,8 +177,8 @@ var renderAndMeasurePage = function (measuredUrl) {
     'use strict';
 
     var page = require('webpage').create(),
-        timer,
-        result = marlinHeadersSetup(userConfig);
+        result = marlinHeadersSetup(userConfig),
+        timer;
 
     isRedirect = false;
 
@@ -233,7 +230,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         if (res.stage === 'start') {
             page.resources[res.id].startReply = res;
         }
-        if (res.stage === 'end') {          
+        if (res.stage === 'end') {
             page.resources[res.id].endReply = res;
             currentlyLoadingElements = currentlyLoadingElements - 1;
         }
@@ -288,11 +285,7 @@ var renderAndMeasurePage = function (measuredUrl) {
                     resultant.log.entries = previousEntries;
                     resultant.log.pages = previousPages;
 
-                    var hosts = resultant.urls_for_dns,
-                        hostsJson = JSON.stringify(hosts, undefined, 4);
-
-                    var resultString = JSON.stringify(resultant, undefined, 4);
-                    phantom.emitData(resultString);
+                    phantom.emitData(JSON.stringify(resultant, undefined, 4));
                 }
             }, 1000);
         }
