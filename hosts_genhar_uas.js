@@ -12,16 +12,15 @@
             }
 
             return this.getFullYear() + '-' +
-            pad(this.getMonth() + 1) + '-' +
-            pad(this.getDate()) + 'T' +
-            pad(this.getHours()) + ':' +
-            pad(this.getMinutes()) + ':' +
-            pad(this.getSeconds()) + '.' +
-            ms(this.getMilliseconds()) + 'Z';
+                pad(this.getMonth() + 1) + '-' +
+                pad(this.getDate()) + 'T' +
+                pad(this.getHours()) + ':' +
+                pad(this.getMinutes()) + ':' +
+                pad(this.getSeconds()) + '.' +
+                ms(this.getMilliseconds()) + 'Z';
         };
     }
 }());
-
 
 function attachPreviousEntries(prevEntries, currEntries) {
     'use strict';
@@ -30,26 +29,28 @@ function attachPreviousEntries(prevEntries, currEntries) {
         return;
     }
 
-    currEntries.forEach(function(obj) {
+    currEntries.forEach(function (obj) {
         prevEntries.push(obj);
     });
 }
 
 function propertyExists(stringy) {
-    return (typeof stringy !== 'undefined' && stringy !== null && stringy.length > 0);
+    "use strict";
+    return (stringy !== 'undefined' && stringy !== null && stringy.length > 0);
 }
 
 function marlinHeadersSetup(userAppConfig) {
+    "use strict";
     var finish = [];
 
     if (propertyExists(userAppConfig.appOS)) {
         finish.push(userAppConfig.appOS, ' ');
     }
     if (propertyExists(userAppConfig.appVersion)) {
-        finish.push(userConfig.appVersion, ' ');
+        finish.push(userAppConfig.appVersion, ' ');
     }
     if (propertyExists(userAppConfig.appDate)) {
-        finish.push(userConfig.appDate, ' ');
+        finish.push(userAppConfig.appDate, ' ');
     }
 
     return finish.join('').trim();
@@ -88,11 +89,14 @@ function createHAR(page, address, title, startTime, resources) {
                     redirectUrl = element.value;
                 }
             });
-        }
+        }        
+
+        var ts = Math.round((new Date(request.time)).getTime() / 1000);
 
         urlArray.push(request.url);
         entries.push({
             startedDateTime: request.time.toISOString(),
+            unixDateTime: ts,
             time: endReply.time - request.time,
             request: {
                 method: request.method,
@@ -151,8 +155,8 @@ function createHAR(page, address, title, startTime, resources) {
             ],
             entries: entries
         },
-        urls_for_dns : {
-            urlArray : urlArray
+        urls_for_dns: {
+            urlArray: urlArray
         }
     };
 }
@@ -165,14 +169,20 @@ var startingAddress = null,
     userConfig = null,
     isRedirect = null;
 
-var previousEntries     = [];
-var previousPages       = [];
-var isRedirect          = false;
+var currentlyLoadingElements = 0;
+var lastElementCount = 0;
+var deltasZeroCount = 0
 
-var renderAndMeasurePage = function(measuredUrl) {
+var previousEntries = [];
+var previousPages = [];
+
+var renderAndMeasurePage = function (measuredUrl) {
     'use strict';
 
-    var page = require('webpage').create();
+    var page = require('webpage').create(),
+        timer,
+        result = marlinHeadersSetup(userConfig);
+
     isRedirect = false;
 
     page.address = measuredUrl;
@@ -182,13 +192,11 @@ var renderAndMeasurePage = function(measuredUrl) {
         page.settings.userAgent = userAgentProfile;
     }
 
-    var result = marlinHeadersSetup(userConfig);
-
-    if (result != null) {
+    if (result !== null) {
         page.customHeaders = {
-            'HTTP_X_MARLIN_MOBILE' : result
-        };    
-    };
+            'HTTP_X_MARLIN_MOBILE': result
+        };
+    }
 
     page.onLoadStarted = function () {
         page.startTime = new Date();
@@ -196,6 +204,7 @@ var renderAndMeasurePage = function(measuredUrl) {
     };
 
     page.onResourceError = function (resourceError) {
+        currentlyLoadingElements = currentlyLoadingElements - 1;
         console.log('Unable to load resource (URL:' + resourceError.url + ')');
         console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
     };
@@ -212,6 +221,7 @@ var renderAndMeasurePage = function(measuredUrl) {
     };
 
     page.onResourceRequested = function (req) {
+        currentlyLoadingElements = currentlyLoadingElements + 1;
         page.resources[req.id] = {
             request: req,
             startReply: null,
@@ -223,12 +233,13 @@ var renderAndMeasurePage = function(measuredUrl) {
         if (res.stage === 'start') {
             page.resources[res.id].startReply = res;
         }
-        if (res.stage === 'end') {
+        if (res.stage === 'end') {          
             page.resources[res.id].endReply = res;
+            currentlyLoadingElements = currentlyLoadingElements - 1;
         }
     };
 
-    page.onNavigationRequested = function(url, type, willNavigate, main) {
+    page.onNavigationRequested = function (url, type, willNavigate, main) {
         if (main && url !== page.address && page.startTime instanceof Date) {
             page.endTime = new Date();
             isRedirect = true;
@@ -250,34 +261,54 @@ var renderAndMeasurePage = function(measuredUrl) {
                 page.close();
                 renderAndMeasurePage(redirectAddress);
             }
-
         } else {
-            console.log("Successfully loaded the URL: " + startingAddress);
+
+            console.log("Loading done! Waiting for all elements to finish...");
             page.endTime = new Date();
             page.title = page.evaluate(function () {
                 return document.title;
             });
-            var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
-            attachPreviousEntries(previousEntries, resultant.log.entries);
-            attachPreviousEntries(previousPages, resultant.log.pages);
 
-            resultant.log.entries = previousEntries;
-            resultant.log.pages = previousPages;
-            phantom.emitData(JSON.stringify(resultant, undefined, 4));
+            timer = setInterval(function () {
+                var lastDelta = lastElementCount - currentlyLoadingElements;
+                if (lastDelta === 0) {
+                    deltasZeroCount = deltasZeroCount + 1;
+                }
+
+                lastElementCount = currentlyLoadingElements;
+
+                if (currentlyLoadingElements === 0 || deltasZeroCount > 10) {
+                    console.log("Completing timer...");
+                    clearInterval(timer);
+
+                    var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
+                    attachPreviousEntries(previousEntries, resultant.log.entries);
+                    attachPreviousEntries(previousPages, resultant.log.pages);
+
+                    resultant.log.entries = previousEntries;
+                    resultant.log.pages = previousPages;
+
+                    var hosts = resultant.urls_for_dns,
+                        hostsJson = JSON.stringify(hosts, undefined, 4);
+
+                    var resultString = JSON.stringify(resultant, undefined, 4);
+                    phantom.emitData(resultString);
+                }
+            }, 1000);
         }
     });
 };
 
 if (system.args.length === 1) {
     console.log('Usage: genhar.js <some URL> [UAS]');
-    phantom.exit(1);
+    phantom.emitData('INVALID_ARGUMENTS');
 } else {
-    phantom.onError = function(msg, trace) {
+    phantom.onError = function (msg, trace) {
         'use strict';
         var msgStack = ['PHANTOM ERROR: ' + msg];
         if (trace && trace.length) {
             msgStack.push('TRACE:');
-            trace.forEach(function(t) {
+            trace.forEach(function (t) {
                 msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
             });
         }
@@ -290,9 +321,9 @@ if (system.args.length === 1) {
     var argsLength = system.args.length;
     if (argsLength === 3) {
         userConfig = JSON.parse(system.args[2]);
-        if (typeof userConfig.userAgent !== 'undefined') {
+        if (userConfig.userAgent !== 'undefined') {
             userAgentProfile = userConfig.userAgent;
-        };
+        }
     }
 
     renderAndMeasurePage(startingAddress);
