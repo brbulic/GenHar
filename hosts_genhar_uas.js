@@ -59,6 +59,42 @@ function marlinHeadersSetup(userAppConfig) {
   return finish.join('').trim();
 }
 
+function filenameMapper(filenamePrefix, filename) {
+  'use strict';
+
+  var fileNameResult = '/';
+  if (filenamePrefix !== '') {
+    fileNameResult = fileNameResult + filenamePrefix + '-' + filename;
+  } else {
+    fileNameResult = fileNameResult + filename;
+  }
+  return fileNameResult;
+}
+
+
+function createStatusFromResponse(response) {
+  'use strict';
+
+  if (response === null) {
+    throw "NO EXIST";
+  }
+
+  var isError = typeof response.errorCode !== 'undefined';
+  var simun = response.status || '';
+  var petar = response.statusText || '';
+
+  if (isError) {
+    console.log("Simun petar");
+    simun = response.errorCode;
+    petar = response.errorString;
+  }
+
+  return {
+    status : simun,
+    statusText : petar
+  };
+}
+
 function createHAR(page, address, title, startTime, endTime, resources) {
   'use strict';
   var entries = [],
@@ -69,18 +105,30 @@ function createHAR(page, address, title, startTime, endTime, resources) {
     var request = resource.request,
     startReply = resource.startReply,
     endReply = resource.endReply,
-    redirectUrl = "";
+    redirectUrl = "",
+    fallbackBodySize = 0;
 
     if (!request || !startReply || !endReply) {
       return;
     }
-    if (endReply.status === 302) {
-      endReply.headers.forEach(function (element) {
+
+    if (typeof resource.resourceError !== 'undefined') {
+      return;
+    }
+
+    endReply.headers.forEach(function (element) {
+      if (endReply.status === 302 || endReply.status == 301) {
         if (element.name === "Location") {
           redirectUrl = element.value;
         }
-      });
-    }
+      }
+
+      if (element.name === "Content-Length") {
+        fallbackBodySize = parseInt(element.value);
+      }
+    });
+
+    var statuses = createStatusFromResponse(endReply);
 
     urlArray.push(request.url);
     entries.push({
@@ -97,16 +145,16 @@ function createHAR(page, address, title, startTime, endTime, resources) {
         bodySize: -1
       },
       response: {
-        status: (endReply.status || ''),
-        statusText: (endReply.statusText || ''),
+        status: statuses.status,
+        statusText: statuses.statusText,
         httpVersion: "HTTP/1.1",
         cookies: [],
         headers: endReply.headers,
         redirectURL: redirectUrl,
         headersSize: -1,
-        bodySize: startReply.bodySize,
+        bodySize: startReply.bodySize ? startReply.bodySize : fallbackBodySize,
         content: {
-          size: startReply.bodySize,
+          size: startReply.bodySize ? startReply.bodySize : fallbackBodySize,
           mimeType: endReply.contentType || ''
         }
       },
@@ -122,7 +170,7 @@ function createHAR(page, address, title, startTime, endTime, resources) {
       },
       pageref: address
     });
-  });
+});
 
 return {
   log: {
@@ -152,7 +200,11 @@ return {
 function sendAndComplete(pagesElements, elements, webPage) {
   'use strict';
   if (webPage.startTime === 'undefined' || webPage.endTime === 'undefined') {
-    throw "Start and End times don't exist!"
+    throw "Start and End times don't exist!";
+  }
+
+  if (pagesElements === 'undefined' || elements === 'undefined') {
+    throw "This is really crap you MOFO";
   }
 
   var tempHar = createHAR(webPage, webPage.address, webPage.title, webPage.startTime, webPage.endTime, webPage.resources);
@@ -171,12 +223,12 @@ function sendAndComplete(pagesElements, elements, webPage) {
 var system = require('system');
 
 var startingAddress = null,
-  redirectAddress = null,
-  userAgentProfile = null,
-  userConfig = null,
-  isRedirect = null;
+redirectAddress = null,
+userAgentProfile = null,
+userConfig = null,
+isRedirect = null;
 
-var currentElementCount = 0;
+var currentlyLoadingElements = 0;
 var lastElementCount = 0;
 var deltasZeroCount = 0;
 
@@ -208,9 +260,10 @@ var renderAndMeasurePage = function (measuredUrl) {
   };
 
   page.onResourceError = function (resourceError) {
-    currentElementCount = currentElementCount - 1;
+    currentlyLoadingElements = currentlyLoadingElements - 1;
     console.log('Unable to load resource (URL:' + resourceError.url + ')');
     console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
+    page.resources[resourceError.id].resourceError = resourceError;
   };
 
   page.onError = function (msg, trace) {
@@ -225,22 +278,32 @@ var renderAndMeasurePage = function (measuredUrl) {
   };
 
   page.onResourceRequested = function (req) {
-    currentElementCount = currentElementCount + 1;
+    currentlyLoadingElements = currentlyLoadingElements + 1;
     page.resources[req.id] = {
       request: req,
-      startReply: null,
+      startReply: req,
       endReply: null
     };
   };
 
   page.onResourceReceived = function (res) {
+
+    var pageResouce = page.resources[res.id];
+
     if (res.stage === 'start') {
-      page.resources[res.id].startReply = res;
+      pageResouce.startReply = res;
     }
     if (res.stage === 'end') {
-      // only deduce elements if the resource has been recieved
-      page.resources[res.id].endReply = res;
-      currentElementCount = currentElementCount - 1;
+      pageResouce.endReply = res;
+      currentlyLoadingElements = currentlyLoadingElements - 1;
+
+      if (timer !== null) {
+        page.endTime = new Date();
+      }
+
+      if (pageResouce.startReply === null) {
+        console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
+      }
     }
   };
 
@@ -271,28 +334,29 @@ var renderAndMeasurePage = function (measuredUrl) {
       console.log("Loading done! Waiting for all elements to finish...");
       page.title = page.evaluate(function () {
         return document.title;
-      });
+      });           
 
       setTimeout(function () {
-        console.log("Waiting for initial timeout...");
+
         timer = setInterval(function () {
-          var lastDelta = lastElementCount - currentElementCount;
+          var lastDelta = lastElementCount - currentlyLoadingElements;
           if (lastDelta === 0) {
             deltasZeroCount = deltasZeroCount + 1;
           }
 
-          lastElementCount = currentElementCount;
+          lastElementCount = currentlyLoadingElements;
 
-          console.log("Currently loading elements: " + currentElementCount);
+          console.log("Currently loading elements: " + currentlyLoadingElements);
           console.log("Completed Delta: " + lastDelta);
 
-          if (currentElementCount === 0 || deltasZeroCount > 4) {
+          if (currentlyLoadingElements === 0 || deltasZeroCount > 4) {
             clearInterval(timer);
-            page.endTime = new Date();
+
             var endHar = sendAndComplete(previousPages, previousEntries, page);
             page.close();
             phantom.emitData(endHar);
           }
+
         }, 1000);
       }, 2500);
     }
