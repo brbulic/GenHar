@@ -109,7 +109,7 @@ function createHAR(page, address, title, startTime, resources) {
         }
 
         if (typeof resource.resourceError !== 'undefined') {
-          return;
+            return;
         }
 
         var fallbackBodySize = 0;
@@ -257,7 +257,6 @@ var renderAndMeasurePage = function (measuredUrl) {
 
     page.onResourceRequested = function (req) {
         currentlyLoadingElements = currentlyLoadingElements + 1;
-        //console.log("Getting: " + req.url + ", ID: " + req.id);
         page.resources[req.id] = {
             request: req,
             startReply: req,
@@ -275,6 +274,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         if (res.stage === 'end') {
             pageResouce.endReply = res;
             currentlyLoadingElements = currentlyLoadingElements - 1;
+            
             if (timer !== null) {
               page.endTime = new Date();
             }
@@ -315,40 +315,42 @@ var renderAndMeasurePage = function (measuredUrl) {
             console.log("Loading done! Waiting for all elements to finish...");
             page.title = page.evaluate(function () {
                 return document.title;
-            });
+            });           
 
-            timer = setInterval(function () {
+            setTimeout(function () {
 
-                var lastDelta = lastElementCount - currentlyLoadingElements;
-                if (lastDelta === 0) {
-                    deltasZeroCount = deltasZeroCount + 1;
-                }
+              timer = setInterval(function () {
+                  var lastDelta = lastElementCount - currentlyLoadingElements;
+                  if (lastDelta === 0) {
+                      deltasZeroCount = deltasZeroCount + 1;
+                  }
 
-                lastElementCount = currentlyLoadingElements;
+                  lastElementCount = currentlyLoadingElements;
 
-                if (currentlyLoadingElements === 0 || deltasZeroCount > 5) {
-                    var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
-                    attachPreviousEntries(previousEntries, resultant.log.entries);
-                    attachPreviousEntries(previousPages, resultant.log.pages);
+                  if (currentlyLoadingElements === 0 || deltasZeroCount > 5) {
+                      var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
+                      attachPreviousEntries(previousEntries, resultant.log.entries);
+                      attachPreviousEntries(previousPages, resultant.log.pages);
 
-                    resultant.log.entries = previousEntries;
-                    resultant.log.pages = previousPages;
+                      resultant.log.entries = previousEntries;
+                      resultant.log.pages = previousPages;
 
-                    var hosts = resultant.urls_for_dns,
-                        hostsJson = JSON.stringify(hosts, undefined, 4);
-                    delete resultant.urls_for_dns;
+                      var hosts = resultant.urls_for_dns,
+                          hostsJson = JSON.stringify(hosts, undefined, 4);
+                      delete resultant.urls_for_dns;
 
-                    var resultString = JSON.stringify(resultant, undefined, 4);
+                      var resultString = JSON.stringify(resultant, undefined, 4);
 
-                    console.log(page.title);            
+                      console.log(page.title);            
 
-                    fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
-                    fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
-                    page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
+                      fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
+                      fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
+                      page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
 
-                    phantom.exit(0);
-                }
-            }, 1000);
+                      phantom.exit(0);
+                  }
+              }, 1000);
+            }, 2000);
         }
     });
 };
