@@ -287,9 +287,8 @@ var renderAndMeasurePage = function (measuredUrl) {
   };
 
   page.onResourceReceived = function (res) {
-
     var pageResouce = page.resources[res.id];
-
+    
     if (res.stage === 'start') {
       pageResouce.startReply = res;
     }
