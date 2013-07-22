@@ -95,11 +95,11 @@ function createStatusFromResponse(response) {
   };
 }
 
-function createHAR(page, address, title, startTime, endTime, resources) {
-  'use strict';
-  var entries = [],
-  urlArray = [],
-  processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
+function createHAR(page, address, title, resources) {
+    'use strict';
+    var entries = [],
+        urlArray = [],
+        processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
 
   resources.forEach(function (resource) {
     var request = resource.request,
@@ -172,29 +172,29 @@ function createHAR(page, address, title, startTime, endTime, resources) {
     });
 });
 
-return {
-  log: {
-    version: '1.2',
-    creator: {
-      name: "MarlinMobile",
-      version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
-    },
-    pages: [
-    {
-      startedDateTime: startTime.toISOString(),
-      id: address,
-      title: processedTitle,
-      pageTimings: {
-        onLoad: endTime - startTime
-      }
-    }
-    ],
-    entries: entries
-  },
-  urls_for_dns: {
-    urlArray: urlArray
-  }
-};
+    return {
+        log: {
+            version: '1.2',
+            creator: {
+                name: "MarlinMobile",
+                version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
+            },
+            pages: [
+                {
+                    startedDateTime: page.startTime.toISOString(),
+                    id: address,
+                    title: processedTitle,
+                    pageTimings: {
+                        onLoad: page.endTime - page.startTime
+                    }
+                }
+            ],
+            entries: entries
+        },
+        urls_for_dns: {
+            urlArray: urlArray
+        }
+    };
 }
 
 function sendAndComplete(pagesElements, elements, webPage) {
@@ -207,7 +207,7 @@ function sendAndComplete(pagesElements, elements, webPage) {
     throw "This is really crap you MOFO";
   }
 
-  var tempHar = createHAR(webPage, webPage.address, webPage.title, webPage.startTime, webPage.endTime, webPage.resources);
+  var tempHar = createHAR(webPage, webPage.address, webPage.title, webPage.resources);
 
   attachPreviousEntries(elements, tempHar.log.entries);
   attachPreviousEntries(pagesElements, tempHar.log.pages);
@@ -323,7 +323,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         phantom.emitData('FAILED');
       } else {
         console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
-        var resHar = createHAR(page, page.address, page.title, page.startTime, page.endTime, page.resources);
+        var resHar = createHAR(page, page.address, page.title, page.resources);
         attachPreviousEntries(previousEntries, resHar.log.entries);
         attachPreviousEntries(previousPages, resHar.log.pages);
         page.close();
