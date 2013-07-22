@@ -92,7 +92,7 @@ function createStatusFromResponse(response) {
   };
 }
 
-function createHAR(page, address, title, startTime, resources) {
+function createHAR(page, address, title, resources) {
     'use strict';
     var entries = [],
         urlArray = [],
@@ -178,7 +178,7 @@ function createHAR(page, address, title, startTime, resources) {
             },
             pages: [
                 {
-                    startedDateTime: startTime.toISOString(),
+                    startedDateTime: page.startTime.toISOString(),
                     id: address,
                     title: processedTitle,
                     pageTimings: {
@@ -304,7 +304,7 @@ var renderAndMeasurePage = function (measuredUrl) {
                 phantom.exit(1);
             } else {
                 console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
-                var resHar = createHAR(page, page.address, page.title, page.startTime, page.resources);
+                var resHar = createHAR(page, page.address, page.title, page.resources);
                 attachPreviousEntries(previousEntries, resHar.log.entries);
                 attachPreviousEntries(previousPages, resHar.log.pages);
                 page.close();
@@ -328,7 +328,7 @@ var renderAndMeasurePage = function (measuredUrl) {
                   lastElementCount = currentlyLoadingElements;
 
                   if (currentlyLoadingElements === 0 || deltasZeroCount > 5) {
-                      var resultant = createHAR(page, page.address, page.title, page.startTime, page.resources);
+                      var resultant = createHAR(page, page.address, page.title, page.resources);
                       attachPreviousEntries(previousEntries, resultant.log.entries);
                       attachPreviousEntries(previousPages, resultant.log.pages);
 
