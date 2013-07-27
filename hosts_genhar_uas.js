@@ -238,7 +238,6 @@ var renderAndMeasurePage = function (measuredUrl) {
     };
 
     page.onResourceError = function (resourceError) {
-        currentlyLoadingElements = currentlyLoadingElements - 1;
         console.log('Unable to load resource (URL:' + resourceError.url + ')');
         console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
         page.resources[resourceError.id].resourceError = resourceError;
@@ -274,11 +273,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         if (res.stage === 'end') {
             pageResouce.endReply = res;
             currentlyLoadingElements = currentlyLoadingElements - 1;
-            
-            if (timer !== null) {
-              page.endTime = new Date();
-            }
-
+          
             if (pageResouce.startReply === null) {
               console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
             }
@@ -313,6 +308,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         } else {
 
             console.log("Loading done! Waiting for all elements to finish...");
+            page.endTime = new Date();
             page.title = page.evaluate(function () {
                 return document.title;
             });           
@@ -327,7 +323,11 @@ var renderAndMeasurePage = function (measuredUrl) {
 
                   lastElementCount = currentlyLoadingElements;
 
-                  if (currentlyLoadingElements === 0 || deltasZeroCount > 5) {
+                  console.log("Items delta: " + lastDelta);
+                  console.log("Current Elements active " + currentlyLoadingElements)
+
+                  if (currentlyLoadingElements === 0 || deltasZeroCount > 15) {
+                      console.log("Creating HAR file...");
                       var resultant = createHAR(page, page.address, page.title, page.resources);
                       attachPreviousEntries(previousEntries, resultant.log.entries);
                       attachPreviousEntries(previousPages, resultant.log.pages);
