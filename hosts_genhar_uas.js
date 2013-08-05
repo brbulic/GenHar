@@ -98,6 +98,11 @@ function createHAR(page, address, title, resources) {
         urlArray = [],
         processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
 
+/*
+    console.log("Page " + processedTitle + " started loading at: " + page.startTime.toISOString());
+    console.log("Page " + processedTitle + " ended loading at: " + page.endTime.toISOString());
+*/
+
     resources.forEach(function (resource) {
         var request = resource.request,
             startReply = resource.startReply,
@@ -233,8 +238,10 @@ var renderAndMeasurePage = function (measuredUrl) {
     }
 
     page.onLoadStarted = function () {
-        page.startTime = new Date();
-        console.log("Started loading " + measuredUrl);
+      if (page.startTime === undefined) {
+        page.startTime = new Date(); 
+      };
+      console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
     };
 
     page.onResourceError = function (resourceError) {
@@ -255,6 +262,11 @@ var renderAndMeasurePage = function (measuredUrl) {
     };
 
     page.onResourceRequested = function (req) {
+      
+      if (page.startTime === undefined) {
+        page.startTime = req.time;
+      }
+      
         currentlyLoadingElements = currentlyLoadingElements + 1;
         page.resources[req.id] = {
             request: req,
@@ -314,7 +326,6 @@ var renderAndMeasurePage = function (measuredUrl) {
             });           
 
             setTimeout(function () {
-
               timer = setInterval(function () {
                   var lastDelta = lastElementCount - currentlyLoadingElements;
                   if (lastDelta === 0) {
