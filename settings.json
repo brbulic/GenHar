@@ -1,1 +1,6 @@
- {"appVersion":"v1.71 DEBUG HAR .info","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 6_1 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Mobile/10B141","appOS":"iOS","appDate":"2013-07-02 13:02:39 +0000"}
+{
+  "appVersion": "v1.71 DEBUG HAR .info",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 6_1 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Mobile/10B141",
+  "appOS": "iOS",
+  "appDate": "2013-07-02 13:02:39 +0000"
+}
