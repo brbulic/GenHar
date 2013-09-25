@@ -120,13 +120,19 @@ function createHAR(page, address, title, resources) {
             }
         });
 
+        var url = request.url;
+
+        if (url !== undefined && url !== null && url.indexOf(";base64") != -1) {
+          url = url.substring(0, 128);
+        }
+
         urlArray.push(request.url);
         entries.push({
             startedDateTime: request.time.toISOString(),
             time: endReply.time - request.time,
             request: {
                 method: request.method,
-                url: request.url,
+                url: url,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
                 headers: request.headers,
