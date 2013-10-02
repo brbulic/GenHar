@@ -12,12 +12,12 @@
             }
 
             return this.getFullYear() + '-' +
-            pad(this.getMonth() + 1) + '-' +
-            pad(this.getDate()) + 'T' +
-            pad(this.getHours()) + ':' +
-            pad(this.getMinutes()) + ':' +
-            pad(this.getSeconds()) + '.' +
-            ms(this.getMilliseconds()) + 'Z';
+                pad(this.getMonth() + 1) + '-' +
+                pad(this.getDate()) + 'T' +
+                pad(this.getHours()) + ':' +
+                pad(this.getMinutes()) + ':' +
+                pad(this.getSeconds()) + '.' +
+                ms(this.getMilliseconds()) + 'Z';
         };
     }
 }());
@@ -70,44 +70,44 @@ function filenameMapper(filenamePrefix, filename) {
 
 
 function createStatusFromResponse(response) {
-  'use strict';
+    'use strict';
 
-  if (response === null) {
-    throw "NO EXIST";
-}
+    if (response === null) {
+        throw "NO EXIST";
+    }
 
-var isError = typeof response.errorCode !== 'undefined';
-var simun = response.status || '';
-var petar = response.statusText || '';
+    var isError = response.errorCode !== undefined;
+    var simun = response.status || '';
+    var petar = response.statusText || '';
 
-if (isError) {
-    console.log("Simun petar");
-    simun = response.errorCode;
-    petar = response.errorString;
-}
+    if (isError) {
+        console.log("Simun petar");
+        simun = response.errorCode;
+        petar = response.errorString;
+    }
 
-return {
-    status : simun,
-    statusText : petar
-};
+    return {
+        status: simun,
+        statusText: petar
+    };
 }
 
 function createHAR(page, address, title, resources) {
     'use strict';
     var entries = [],
-    urlArray = [],
-    processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
+        urlArray = [],
+        processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
 
-/*
-    console.log("Page " + processedTitle + " started loading at: " + page.startTime.toISOString());
-    console.log("Page " + processedTitle + " ended loading at: " + page.endTime.toISOString());
-    */
+    /*
+     console.log("Page " + processedTitle + " started loading at: " + page.startTime.toISOString());
+     console.log("Page " + processedTitle + " ended loading at: " + page.endTime.toISOString());
+     */
 
     resources.forEach(function (resource) {
         var request = resource.request,
-        startReply = resource.startReply,
-        endReply = resource.endReply,
-        redirectUrl = "";
+            startReply = resource.startReply,
+            endReply = resource.endReply,
+            redirectUrl = "";
 
         if (!request || !startReply || !endReply) {
             return;
@@ -119,7 +119,7 @@ function createHAR(page, address, title, resources) {
 
         var fallbackBodySize = 0;
         endReply.headers.forEach(function (element) {
-            if (endReply.status === 302 || endReply.status == 301) {
+            if (endReply.status === 302 || endReply.status === 301) {
                 if (element.name === "Location") {
                     redirectUrl = element.value;
                 }
@@ -127,14 +127,15 @@ function createHAR(page, address, title, resources) {
 
             if (element.name === "Content-Length") {
                 fallbackBodySize = parseInt(element.value);
-            }          
+            }
         });
 
         var statuses = createStatusFromResponse(endReply);
 
         var url = request.url;
 
-        if (url !== undefined && url !== null && url.indexOf(";base64") != -1) {
+        // limit base64 string size to 128 bytes!
+        if (url !== undefined && url !== null && url.indexOf(";base64") !== -1) {
             url = url.substring(0, 128);
         }
 
@@ -160,9 +161,9 @@ function createHAR(page, address, title, resources) {
                 headers: endReply.headers,
                 redirectURL: redirectUrl,
                 headersSize: -1,
-                bodySize: startReply.bodySize ? startReply.bodySize : fallbackBodySize,
+                bodySize: startReply.bodySize || fallbackBodySize,
                 content: {
-                    size: startReply.bodySize ? startReply.bodySize : fallbackBodySize,
+                    size: startReply.bodySize || fallbackBodySize,
                     mimeType: endReply.contentType || ''
                 }
             },
@@ -178,45 +179,44 @@ function createHAR(page, address, title, resources) {
             },
             pageref: address
         });
-});
+    });
 
-return {
-    log: {
-        version: '1.2',
-        creator: {
-            name: "MarlinMobile",
-            version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
+    return {
+        log: {
+            version: '1.2',
+            creator: {
+                name: "MarlinMobile",
+                version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
+            },
+            pages: [
+                {
+                    startedDateTime: page.startTime.toISOString(),
+                    id: address,
+                    title: processedTitle,
+                    pageTimings: {
+                        onLoad: page.endTime - page.startTime,
+                        onReady : (new Date()) - page.startTime
+                    }
+                }
+            ],
+            entries: entries
         },
-        pages: [
-        {
-            startedDateTime: page.startTime.toISOString(),
-            id: address,
-            title: processedTitle,
-            pageTimings: {
-                onLoad: page.endTime - page.startTime
-            }
+        urls_for_dns: {
+            urlArray: urlArray
         }
-        ],
-        entries: entries
-    },
-    urls_for_dns: {
-        urlArray: urlArray
-    }
-};
+    };
 }
 
 var system = require('system');
 var fs = require('fs');
 
 var startingAddress = null,
-redirectAddress = null,
-userAgentProfile = null,
-userConfig = null,
-isRedirect = null;
+    redirectAddress = null,
+    userAgentProfile = null,
+    userConfig = null,
+    isRedirect = null;
 
 var currentlyLoadingElements = 0;
-var lastElementCount = 0;
-var deltasZeroCount = 0
 
 var previousEntries = [];
 var previousPages = [];
@@ -225,8 +225,7 @@ var renderAndMeasurePage = function (measuredUrl) {
     'use strict';
 
     var page = require('webpage').create(),
-    timer,
-    result = marlinHeadersSetup(userConfig);
+        result = marlinHeadersSetup(userConfig);
 
     isRedirect = false;
 
@@ -244,132 +243,116 @@ var renderAndMeasurePage = function (measuredUrl) {
     }
 
     page.onLoadStarted = function () {
-      if (page.startTime === undefined) {
-        page.startTime = new Date(); 
-    };
-    console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
-};
-
-page.onResourceError = function (resourceError) {
-    console.log('Unable to load resource (URL:' + resourceError.url + ')');
-    console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
-    page.resources[resourceError.id].resourceError = resourceError;
-};
-
-page.onError = function (msg, trace) {
-    var msgStack = ['ERROR: ' + msg];
-    if (trace) {
-        msgStack.push('TRACE:');
-        trace.forEach(function (t) {
-            msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
-        });
-    }
-    console.error(msgStack.join('\n'));
-};
-
-page.onResourceRequested = function (req) {
-
-  if (page.startTime === undefined) {
-    page.startTime = req.time;
-}
-
-currentlyLoadingElements = currentlyLoadingElements + 1;
-page.resources[req.id] = {
-    request: req,
-    startReply: req,
-    endReply: null
-};
-};
-
-page.onResourceReceived = function (res) {
-
-    var pageResouce = page.resources[res.id];
-
-    if (res.stage === 'start') {
-        pageResouce.startReply = res;
-    }
-    if (res.stage === 'end') {
-        pageResouce.endReply = res;
-        currentlyLoadingElements = currentlyLoadingElements - 1;
-
-        if (pageResouce.startReply === null) {
-          console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
-      }
-  }
-};
-
-page.onNavigationRequested = function (url, type, willNavigate, main) {
-    if (main && url !== page.address && page.startTime instanceof Date) {
-        page.endTime = new Date();
-        isRedirect = true;
-        console.log("Redirecting to url: " + url + " from: " + page.address);
-        redirectAddress = url;
-    }
-};
-
-page.open(measuredUrl, function (status) {
-    fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
-    console.log('Current status is: ' + status);
-
-    if (status !== 'success') {
-        if (isRedirect === false) {
-            console.log("FAILED loading of url: " + startingAddress);
-            phantom.exit(1);
-        } else {
-            console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
-            var resHar = createHAR(page, page.address, page.title, page.resources);
-            attachPreviousEntries(previousEntries, resHar.log.entries);
-            attachPreviousEntries(previousPages, resHar.log.pages);
-            page.close();
-            renderAndMeasurePage(redirectAddress);
+        if (page.startTime === undefined) {
+            page.startTime = new Date();
         }
-    } else {
+        console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
+    };
 
-        console.log("Loading done! Waiting for all elements to finish...");
-        page.endTime = new Date();
-        page.title = page.evaluate(function () {
-            return document.title;
-        });           
+    page.onResourceError = function (resourceError) {
+        console.log('Unable to load resource (URL:' + resourceError.url + ')');
+        console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
+        page.resources[resourceError.id].resourceError = resourceError;
+    };
 
-        setTimeout(function () {
-          timer = setInterval(function () {
-              var lastDelta = lastElementCount - currentlyLoadingElements;
-              if (lastDelta === 0) {
-                  deltasZeroCount = deltasZeroCount + 1;
-              }
+    page.onError = function (msg, trace) {
+        var msgStack = ['ERROR: ' + msg];
+        if (trace) {
+            msgStack.push('TRACE:');
+            trace.forEach(function (t) {
+                msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
+            });
+        }
+        console.error(msgStack.join('\n'));
+    };
 
-              lastElementCount = currentlyLoadingElements;
+    page.onResourceRequested = function (req) {
 
-              console.log("Items delta: " + lastDelta);
-              console.log("Current Elements active " + currentlyLoadingElements)
+        if (page.startTime === undefined) {
+            page.startTime = req.time;
+        }
 
-              if (currentlyLoadingElements === 0 || deltasZeroCount > 15) {
-                  console.log("Creating HAR file...");
-                  var resultant = createHAR(page, page.address, page.title, page.resources);
-                  attachPreviousEntries(previousEntries, resultant.log.entries);
-                  attachPreviousEntries(previousPages, resultant.log.pages);
+        currentlyLoadingElements = currentlyLoadingElements + 1;
+        page.resources[req.id] = {
+            request: req,
+            startReply: req,
+            endReply: null
+        };
+    };
 
-                  resultant.log.entries = previousEntries;
-                  resultant.log.pages = previousPages;
+    page.onResourceReceived = function (res) {
 
-                  var hosts = resultant.urls_for_dns,
-                  hostsJson = JSON.stringify(hosts, undefined, 4);
-                  delete resultant.urls_for_dns;
+        var pageResouce = page.resources[res.id];
 
-                  var resultString = JSON.stringify(resultant, undefined, 4);
+        if (res.stage === 'start') {
+            pageResouce.startReply = res;
+        }
+        if (res.stage === 'end') {
+            pageResouce.endReply = res;
+            currentlyLoadingElements = currentlyLoadingElements - 1;
 
-                  console.log(page.title);            
+            if (pageResouce.startReply === null) {
+                console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
+            }
+        }
+    };
 
-                  fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
-                  fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
-                  page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
+    page.onNavigationRequested = function (url, type, willNavigate, main) {
+        if (main && url !== page.address && page.startTime instanceof Date) {
+            page.endTime = new Date();
+            isRedirect = true;
+            console.log("Redirecting to url: " + url + " from: " + page.address);
+            redirectAddress = url;
+        }
+    };
 
-                  phantom.exit(0);
-              }
-          }, 1000);
-}, 2000);
-}
-});
+    page.open(measuredUrl, function (status) {
+        fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
+        console.log('Current status is: ' + status);
+
+        if (status !== 'success') {
+            if (isRedirect === false) {
+                console.log("FAILED loading of url: " + startingAddress);
+                phantom.exit(1);
+            } else {
+                console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
+                var resHar = createHAR(page, page.address, page.title, page.resources);
+                attachPreviousEntries(previousEntries, resHar.log.entries);
+                attachPreviousEntries(previousPages, resHar.log.pages);
+                page.close();
+                renderAndMeasurePage(redirectAddress);
+            }
+        } else {
+
+            console.log("Loading done! Waiting for all elements to finish...");
+            page.endTime = new Date();
+            page.title = page.evaluate(function () {
+                return document.title;
+            });
+
+            console.log("Creating HAR file...");
+            var resultant = createHAR(page, page.address, page.title, page.resources);
+            attachPreviousEntries(previousEntries, resultant.log.entries);
+            attachPreviousEntries(previousPages, resultant.log.pages);
+
+            resultant.log.entries   = previousEntries;
+            resultant.log.pages     = previousPages;
+
+            var hosts = resultant.urls_for_dns,
+                hostsJson = JSON.stringify(hosts, undefined, 4);
+            delete resultant.urls_for_dns;
+
+            var resultString = JSON.stringify(resultant, undefined, 4);
+
+            console.log(page.title);
+
+            fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
+            fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
+            page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
+
+            phantom.exit(0);
+        }
+    });
 };
 
 if (system.args.length === 1) {
