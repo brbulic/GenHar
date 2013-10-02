@@ -12,12 +12,12 @@
             }
 
             return this.getFullYear() + '-' +
-                pad(this.getMonth() + 1) + '-' +
-                pad(this.getDate()) + 'T' +
-                pad(this.getHours()) + ':' +
-                pad(this.getMinutes()) + ':' +
-                pad(this.getSeconds()) + '.' +
-                ms(this.getMilliseconds()) + 'Z';
+            pad(this.getMonth() + 1) + '-' +
+            pad(this.getDate()) + 'T' +
+            pad(this.getHours()) + ':' +
+            pad(this.getMinutes()) + ':' +
+            pad(this.getSeconds()) + '.' +
+            ms(this.getMilliseconds()) + 'Z';
         };
     }
 }());
@@ -74,40 +74,40 @@ function createStatusFromResponse(response) {
 
   if (response === null) {
     throw "NO EXIST";
-  }
+}
 
-  var isError = typeof response.errorCode !== 'undefined';
-  var simun = response.status || '';
-  var petar = response.statusText || '';
+var isError = typeof response.errorCode !== 'undefined';
+var simun = response.status || '';
+var petar = response.statusText || '';
 
-  if (isError) {
+if (isError) {
     console.log("Simun petar");
     simun = response.errorCode;
     petar = response.errorString;
-  }
+}
 
-  return {
+return {
     status : simun,
     statusText : petar
-  };
+};
 }
 
 function createHAR(page, address, title, resources) {
     'use strict';
     var entries = [],
-        urlArray = [],
-        processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
+    urlArray = [],
+    processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
 
 /*
     console.log("Page " + processedTitle + " started loading at: " + page.startTime.toISOString());
     console.log("Page " + processedTitle + " ended loading at: " + page.endTime.toISOString());
-*/
+    */
 
     resources.forEach(function (resource) {
         var request = resource.request,
-            startReply = resource.startReply,
-            endReply = resource.endReply,
-            redirectUrl = "";
+        startReply = resource.startReply,
+        endReply = resource.endReply,
+        redirectUrl = "";
 
         if (!request || !startReply || !endReply) {
             return;
@@ -119,18 +119,24 @@ function createHAR(page, address, title, resources) {
 
         var fallbackBodySize = 0;
         endReply.headers.forEach(function (element) {
-          if (endReply.status === 302 || endReply.status == 301) {
-            if (element.name === "Location") {
-              redirectUrl = element.value;
+            if (endReply.status === 302 || endReply.status == 301) {
+                if (element.name === "Location") {
+                    redirectUrl = element.value;
+                }
             }
-          }
 
-          if (element.name === "Content-Length") {
-            fallbackBodySize = parseInt(element.value);
-          }          
+            if (element.name === "Content-Length") {
+                fallbackBodySize = parseInt(element.value);
+            }          
         });
 
         var statuses = createStatusFromResponse(endReply);
+
+        var url = request.url;
+
+        if (url !== undefined && url !== null && url.indexOf(";base64") != -1) {
+            url = url.substring(0, 128);
+        }
 
         urlArray.push(request.url);
         entries.push({
@@ -138,7 +144,7 @@ function createHAR(page, address, title, resources) {
             time: endReply.time - request.time,
             request: {
                 method: request.method,
-                url: request.url,
+                url: url,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
                 headers: request.headers,
@@ -172,41 +178,41 @@ function createHAR(page, address, title, resources) {
             },
             pageref: address
         });
-    });
+});
 
-    return {
-        log: {
-            version: '1.2',
-            creator: {
-                name: "MarlinMobile",
-                version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
-            },
-            pages: [
-                {
-                    startedDateTime: page.startTime.toISOString(),
-                    id: address,
-                    title: processedTitle,
-                    pageTimings: {
-                        onLoad: page.endTime - page.startTime
-                    }
-                }
-            ],
-            entries: entries
+return {
+    log: {
+        version: '1.2',
+        creator: {
+            name: "MarlinMobile",
+            version: phantom.version.major + '.' + phantom.version.minor + '.' + phantom.version.patch
         },
-        urls_for_dns: {
-            urlArray: urlArray
+        pages: [
+        {
+            startedDateTime: page.startTime.toISOString(),
+            id: address,
+            title: processedTitle,
+            pageTimings: {
+                onLoad: page.endTime - page.startTime
+            }
         }
-    };
+        ],
+        entries: entries
+    },
+    urls_for_dns: {
+        urlArray: urlArray
+    }
+};
 }
 
 var system = require('system');
 var fs = require('fs');
 
 var startingAddress = null,
-    redirectAddress = null,
-    userAgentProfile = null,
-    userConfig = null,
-    isRedirect = null;
+redirectAddress = null,
+userAgentProfile = null,
+userConfig = null,
+isRedirect = null;
 
 var currentlyLoadingElements = 0;
 var lastElementCount = 0;
@@ -219,8 +225,8 @@ var renderAndMeasurePage = function (measuredUrl) {
     'use strict';
 
     var page = require('webpage').create(),
-        timer,
-        result = marlinHeadersSetup(userConfig);
+    timer,
+    result = marlinHeadersSetup(userConfig);
 
     isRedirect = false;
 
@@ -240,130 +246,130 @@ var renderAndMeasurePage = function (measuredUrl) {
     page.onLoadStarted = function () {
       if (page.startTime === undefined) {
         page.startTime = new Date(); 
-      };
-      console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
     };
+    console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
+};
 
-    page.onResourceError = function (resourceError) {
-        console.log('Unable to load resource (URL:' + resourceError.url + ')');
-        console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
-        page.resources[resourceError.id].resourceError = resourceError;
-    };
+page.onResourceError = function (resourceError) {
+    console.log('Unable to load resource (URL:' + resourceError.url + ')');
+    console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
+    page.resources[resourceError.id].resourceError = resourceError;
+};
 
-    page.onError = function (msg, trace) {
-        var msgStack = ['ERROR: ' + msg];
-        if (trace) {
-            msgStack.push('TRACE:');
-            trace.forEach(function (t) {
-                msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
-            });
-        }
-        console.error(msgStack.join('\n'));
-    };
+page.onError = function (msg, trace) {
+    var msgStack = ['ERROR: ' + msg];
+    if (trace) {
+        msgStack.push('TRACE:');
+        trace.forEach(function (t) {
+            msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
+        });
+    }
+    console.error(msgStack.join('\n'));
+};
 
-    page.onResourceRequested = function (req) {
-      
-      if (page.startTime === undefined) {
-        page.startTime = req.time;
+page.onResourceRequested = function (req) {
+
+  if (page.startTime === undefined) {
+    page.startTime = req.time;
+}
+
+currentlyLoadingElements = currentlyLoadingElements + 1;
+page.resources[req.id] = {
+    request: req,
+    startReply: req,
+    endReply: null
+};
+};
+
+page.onResourceReceived = function (res) {
+
+    var pageResouce = page.resources[res.id];
+
+    if (res.stage === 'start') {
+        pageResouce.startReply = res;
+    }
+    if (res.stage === 'end') {
+        pageResouce.endReply = res;
+        currentlyLoadingElements = currentlyLoadingElements - 1;
+
+        if (pageResouce.startReply === null) {
+          console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
       }
-      
-        currentlyLoadingElements = currentlyLoadingElements + 1;
-        page.resources[req.id] = {
-            request: req,
-            startReply: req,
-            endReply: null
-        };
-    };
+  }
+};
 
-    page.onResourceReceived = function (res) {
+page.onNavigationRequested = function (url, type, willNavigate, main) {
+    if (main && url !== page.address && page.startTime instanceof Date) {
+        page.endTime = new Date();
+        isRedirect = true;
+        console.log("Redirecting to url: " + url + " from: " + page.address);
+        redirectAddress = url;
+    }
+};
 
-        var pageResouce = page.resources[res.id];
+page.open(measuredUrl, function (status) {
+    fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
+    console.log('Current status is: ' + status);
 
-        if (res.stage === 'start') {
-            pageResouce.startReply = res;
-        }
-        if (res.stage === 'end') {
-            pageResouce.endReply = res;
-            currentlyLoadingElements = currentlyLoadingElements - 1;
-          
-            if (pageResouce.startReply === null) {
-              console.log("Completed getting something that doesn't have start! See: " + res.url + ", ID: " + res.id + ", Stage: " + res.stage);
-            }
-        }
-    };
-
-    page.onNavigationRequested = function (url, type, willNavigate, main) {
-        if (main && url !== page.address && page.startTime instanceof Date) {
-            page.endTime = new Date();
-            isRedirect = true;
-            console.log("Redirecting to url: " + url + " from: " + page.address);
-            redirectAddress = url;
-        }
-    };
-
-    page.open(measuredUrl, function (status) {
-        fs.write(fs.workingDirectory + filenameMapper(page.title, 'page.html'), page.content, 'w');
-        console.log('Current status is: ' + status);
-
-        if (status !== 'success') {
-            if (isRedirect === false) {
-                console.log("FAILED loading of url: " + startingAddress);
-                phantom.exit(1);
-            } else {
-                console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
-                var resHar = createHAR(page, page.address, page.title, page.resources);
-                attachPreviousEntries(previousEntries, resHar.log.entries);
-                attachPreviousEntries(previousPages, resHar.log.pages);
-                page.close();
-                renderAndMeasurePage(redirectAddress);
-            }
+    if (status !== 'success') {
+        if (isRedirect === false) {
+            console.log("FAILED loading of url: " + startingAddress);
+            phantom.exit(1);
         } else {
-
-            console.log("Loading done! Waiting for all elements to finish...");
-            page.endTime = new Date();
-            page.title = page.evaluate(function () {
-                return document.title;
-            });           
-
-            setTimeout(function () {
-              timer = setInterval(function () {
-                  var lastDelta = lastElementCount - currentlyLoadingElements;
-                  if (lastDelta === 0) {
-                      deltasZeroCount = deltasZeroCount + 1;
-                  }
-
-                  lastElementCount = currentlyLoadingElements;
-
-                  console.log("Items delta: " + lastDelta);
-                  console.log("Current Elements active " + currentlyLoadingElements)
-
-                  if (currentlyLoadingElements === 0 || deltasZeroCount > 15) {
-                      console.log("Creating HAR file...");
-                      var resultant = createHAR(page, page.address, page.title, page.resources);
-                      attachPreviousEntries(previousEntries, resultant.log.entries);
-                      attachPreviousEntries(previousPages, resultant.log.pages);
-
-                      resultant.log.entries = previousEntries;
-                      resultant.log.pages = previousPages;
-
-                      var hosts = resultant.urls_for_dns,
-                          hostsJson = JSON.stringify(hosts, undefined, 4);
-                      delete resultant.urls_for_dns;
-
-                      var resultString = JSON.stringify(resultant, undefined, 4);
-
-                      console.log(page.title);            
-
-                      fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
-                      fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
-                      page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
-
-                      phantom.exit(0);
-                  }
-              }, 1000);
-            }, 2000);
+            console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
+            var resHar = createHAR(page, page.address, page.title, page.resources);
+            attachPreviousEntries(previousEntries, resHar.log.entries);
+            attachPreviousEntries(previousPages, resHar.log.pages);
+            page.close();
+            renderAndMeasurePage(redirectAddress);
         }
-    });
+    } else {
+
+        console.log("Loading done! Waiting for all elements to finish...");
+        page.endTime = new Date();
+        page.title = page.evaluate(function () {
+            return document.title;
+        });           
+
+        setTimeout(function () {
+          timer = setInterval(function () {
+              var lastDelta = lastElementCount - currentlyLoadingElements;
+              if (lastDelta === 0) {
+                  deltasZeroCount = deltasZeroCount + 1;
+              }
+
+              lastElementCount = currentlyLoadingElements;
+
+              console.log("Items delta: " + lastDelta);
+              console.log("Current Elements active " + currentlyLoadingElements)
+
+              if (currentlyLoadingElements === 0 || deltasZeroCount > 15) {
+                  console.log("Creating HAR file...");
+                  var resultant = createHAR(page, page.address, page.title, page.resources);
+                  attachPreviousEntries(previousEntries, resultant.log.entries);
+                  attachPreviousEntries(previousPages, resultant.log.pages);
+
+                  resultant.log.entries = previousEntries;
+                  resultant.log.pages = previousPages;
+
+                  var hosts = resultant.urls_for_dns,
+                  hostsJson = JSON.stringify(hosts, undefined, 4);
+                  delete resultant.urls_for_dns;
+
+                  var resultString = JSON.stringify(resultant, undefined, 4);
+
+                  console.log(page.title);            
+
+                  fs.write(fs.workingDirectory + filenameMapper(page.title, 'har.json'), resultString, 'w');
+                  fs.write(fs.workingDirectory + filenameMapper(page.title, 'hosts.json'), hostsJson, 'w');
+                  page.render(fs.workingDirectory + filenameMapper(page.title, 'screenshot.png'));
+
+                  phantom.exit(0);
+              }
+          }, 1000);
+}, 2000);
+}
+});
 };
 
 if (system.args.length === 1) {
