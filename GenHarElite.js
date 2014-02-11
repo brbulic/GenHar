@@ -150,11 +150,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         if (status !== 'success') {
             if (isRedirect === false) {
                 console.log("FAILED loading of url: " + startingAddress);
-
-                var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
-                SaveModule.execute();
-
-                phantom.exit();
+                phantom.emitHar("FAILED");
             } else {
                 console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
                 HarFactory.populateFromWebPage(page);
@@ -189,11 +185,10 @@ var renderAndMeasurePage = function (measuredUrl) {
                             HarFactory.populateFromWebPage(page);
                             page.close();
 
-                            var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                            var SaveModule = require("./SaveModuleMobile").createNew(page, HarFactory);
                             SaveModule.execute();
 
                             console.log("All done! Thanks!");
-                            phantom.exit();
                         }
                     }, 1000);
                 }, 2500);
@@ -202,11 +197,10 @@ var renderAndMeasurePage = function (measuredUrl) {
                 HarFactory.populateFromWebPage(page);
                 page.close();
 
-                var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                var SaveModule = require("./SaveModuleMobile").createNew(page, HarFactory);
                 SaveModule.execute();
 
                 console.log("All done! Thanks!");
-                phantom.exit();
             }
         }
     });
