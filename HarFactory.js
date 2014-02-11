@@ -124,6 +124,23 @@ var GenHarFactory = function (page, address, title, resources, config) {
         });
     });
 
+    var renderings = [];
+    if (page.nrend > 0) {
+        page.renderTime = page.rends[0].end;
+    } else {
+        page.renderTime = page.endTime;
+    }
+    page.rends.forEach(function (rend) {
+        renderings.push({
+            id: rend.id,
+            url: rend.url,
+            rect: rend.rect,
+            start: rend.start,
+            end: rend.end,
+            time: rend.rendtime
+        });
+    });
+
     return {
         log: {
             version: '1.3',
@@ -139,11 +156,14 @@ var GenHarFactory = function (page, address, title, resources, config) {
                     pageTimings: {
                         onLoad: page.endTime - page.firstResource,
                         browserFirstLoad: page.firstResource - page.startTime,
-                        onReady: (new Date()) - page.startTime
+                        onContentLoad: page.renderTime - page.startTime,
+                        _st: page.startTime,
+                        _et: page.endTime
                     }
                 }
             ],
-            entries: entries
+            entries: entries,
+            _renderings: renderings
         },
         urls_for_dns: {
             urlArray: urlArray

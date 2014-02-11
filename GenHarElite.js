@@ -48,6 +48,8 @@ var renderAndMeasurePage = function (measuredUrl) {
 
     page.address = measuredUrl;
     page.resources = [];
+    page.rends = [];
+    page.nrend = 0;
 
     if (result !== null && result.length > 0) {
         page.customHeaders = {
@@ -78,6 +80,10 @@ var renderAndMeasurePage = function (measuredUrl) {
             });
         }
         console.error(msgStack.join('\n'));
+    };
+
+    page.onRenderingComplete = function (rend) {
+        page.rends[page.nrend++] = rend;
     };
 
     page.onResourceRequested = function (req) {
