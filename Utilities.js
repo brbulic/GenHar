@@ -11,6 +11,7 @@ var attachPreviousEntries = function (currentEntries, newEntries) {
 };
 
 var isUrlStringValidUrl = function (requestUrl) {
+    "use strict";
     return (requestUrl.indexOf("http://") === 0 || requestUrl.indexOf("https://") === 0);
 };
 

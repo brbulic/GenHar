@@ -26,10 +26,7 @@
 
 var system = require('system'),
     HarFactory = require("./HarFactory").createNew(),
-    Utilities = require("./Utilities"),
-    FilenameMapper = require("./FilenameMapper"),
-    fs = require('fs');
-
+    Utilities = require("./Utilities");
 
 var startingAddress = null,
     redirectAddress = null,
@@ -147,7 +144,10 @@ var renderAndMeasurePage = function (measuredUrl) {
         if (status !== 'success') {
             if (isRedirect === false) {
                 console.log("FAILED loading of url: " + startingAddress);
-//                phantom.emitData('FAILED');
+
+                var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                SaveModule.execute();
+
                 phantom.exit();
             } else {
                 console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
@@ -183,11 +183,8 @@ var renderAndMeasurePage = function (measuredUrl) {
                         HarFactory.populateFromWebPage(page);
                         page.close();
 
-                        var urlForDns = HarFactory.harFile().urls_for_dns;
-
-                        fs.write(fs.workingDirectory + FilenameMapper.filenameMapper(page.title, 'har.json'), HarFactory.harString(), 'w');
-                        fs.write(fs.workingDirectory + FilenameMapper.filenameMapper(page.title, 'hosts.json'), JSON.stringify(urlForDns, undefined, 1), 'w');
-                        page.render(fs.workingDirectory + FilenameMapper.filenameMapper(page.title, 'screenshot.png'));
+                        var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                        SaveModule.execute();
 
                         phantom.exit();
 
