@@ -25,7 +25,9 @@ The PhantomJS script uses a PhantomJS script which requires a certain config. Fo
         appVersion: "v1.71 DEBUG HAR .info",
         userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 6_1 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Mobile/10B141",
         appOS: "iOS",
-        appDate: "2000-12-27 13:37:59 +0000"
+        appDate: "2000-12-27 13:37:59 +0000",
+    	"fullHeader": true,
+		"fullSpeed": true
     }
 
 Just fill these elements with the required data and the script will create the marlin custom header called `HTTP_X_MARLIN_MOBILE` with App Version, App OS and App Date. The `userAgent` will be used for setting the custom user agent.
