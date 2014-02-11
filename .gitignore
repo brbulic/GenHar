@@ -1,4 +1,5 @@
 .idea/*
-*.json
-*.png
+*-har.json
+*-hosts.json
+*-screenshot.png
 *DS_Store*

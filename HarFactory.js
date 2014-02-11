@@ -63,7 +63,7 @@ var GenHarFactory = function (page, address, title, resources) {
                 url: url,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
-                headers: [],
+                headers: request.headers,
                 queryString: [],
                 headersSize: -1,
                 bodySize: -1
@@ -73,7 +73,7 @@ var GenHarFactory = function (page, address, title, resources) {
                 statusText: statuses.statusText,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
-                headers: [],
+                headers: endReply.headers,
                 redirectURL: redirectUrl,
                 headersSize: -1,
                 bodySize: bodySize,
