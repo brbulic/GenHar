@@ -1,6 +1,8 @@
 {
-  "appVersion": "v1.9 DEBUG HAR .info",
-  "userAgent": "Mozilla\/5.0 (iPad; CPU OS 7_0_3 like Mac OS X) AppleWebKit\/537.51.1 (KHTML, like Gecko) Mobile\/11B508",
-  "appOS": "iOS",
-  "appDate": "2013-07-02 13:02:39 +0000"
+    "appVersion": "v1.9 DEBUG HAR .info",
+    "userAgent": "Mozilla\/5.0 (iPad; CPU OS 7_0_3 like Mac OS X) AppleWebKit\/537.51.1 (KHTML, like Gecko) Mobile\/11B508",
+    "appOS": "iOS",
+    "appDate": "2013-07-02 13:02:39 +0000",
+    "fullHeader": true,
+    "fullSpeed": true
 }

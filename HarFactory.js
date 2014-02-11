@@ -1,10 +1,11 @@
 var Utilities = require("./Utilities");
 
-var GenHarFactory = function (page, address, title, resources) {
+var GenHarFactory = function (page, address, title, resources, config) {
     "use strict";
     var entries = [],
         urlArray = [],
-        processedTitle = title.length === 0 ? address : address + ' (' + title + ')';
+        processedTitle = title.length === 0 ? address : address + ' (' + title + ')',
+        useHeaders = config.fullHeader;
 
     resources.forEach(function (resource) {
         var request = resource.request,
@@ -31,17 +32,43 @@ var GenHarFactory = function (page, address, title, resources) {
             endReply.unfinished = false;
         }
 
-        endReply.headers.forEach(function (element) {
-            if (endReply.status === 302 || endReply.status === 301) {
-                if (element.name === "Location") {
-                    redirectUrl = element.value;
-                }
-            }
+        var headers = [];
 
-            if (element.name === "Content-Length") {
-                fallbackBodySize = parseInt(element.value, 10);
+        if (useHeaders) {
+            headers.push({
+                name : "UncompressedSize",
+                value : (endReply.bodySize || 0).toString()
+            });
+            var contentLengthHeader = null;
+
+            endReply.headers.forEach(function (element) {
+                if (endReply.status === 302 || endReply.status === 301) {
+                    if (element.name === "Location") {
+                        redirectUrl = element.value;
+                    }
+                }
+
+                if (element.name === "Content-Length") {
+                    fallbackBodySize = parseInt(element.value, 10);
+
+                    if (endReply.bodySize) {
+                        element.value = (endReply.compressedSize).toString();
+                    }
+
+                    contentLengthHeader = element;
+                }
+
+                headers.push(element);
+            });
+
+            if (contentLengthHeader === null) {
+                var a = {
+                    name : "Content-Length",
+                    value : (endReply.compressedSize || 0).toString()
+                };
+                headers.push(a);
             }
-        });
+        }
 
         if (url !== undefined && url !== null && url.indexOf(";base64") !== -1) {
             url = url.substring(0, 128);
@@ -63,7 +90,7 @@ var GenHarFactory = function (page, address, title, resources) {
                 url: url,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
-                headers: request.headers,
+                headers: useHeaders ? request.headers : [],
                 queryString: [],
                 headersSize: -1,
                 bodySize: -1
@@ -73,12 +100,13 @@ var GenHarFactory = function (page, address, title, resources) {
                 statusText: statuses.statusText,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
-                headers: endReply.headers,
+                headers: headers,
                 redirectURL: redirectUrl,
                 headersSize: -1,
                 bodySize: bodySize,
                 content: {
                     size: bodySize,
+                    uncompressedSize : endReply.bodySize || 0,
                     mimeType: (endReply.contentType || '')
                 }
             },
@@ -123,11 +151,15 @@ var GenHarFactory = function (page, address, title, resources) {
     };
 };
 
-var SendAndComplete = function () {
+var SendAndComplete = function (externalConfig) {
     'use strict';
     var previousEntries = [],
         previousPages = [],
-        currentHar = null;
+        currentHar = null,
+        config = {
+            fullHeader : externalConfig.fullHeader,
+            fullSpeed : externalConfig.fullSpeed
+        };
 
     var attachResults = function (pagesElements, harFileEntries, webPage) {
         if (webPage.startTime === undefined || webPage.endTime === undefined) {
@@ -144,7 +176,7 @@ var SendAndComplete = function () {
 
     var populateFromWebPage = function (webPage) {
 
-        var tempHar = new GenHarFactory(webPage, webPage.address, webPage.title, webPage.resources);
+        var tempHar = new GenHarFactory(webPage, webPage.address, webPage.title, webPage.resources, config);
 
         attachResults(tempHar.log.pages, tempHar.log.entries, webPage);
 
@@ -168,6 +200,6 @@ var SendAndComplete = function () {
     };
 }
 
-exports.createNew = function () {
-    return new SendAndComplete();
+exports.createNew = function (externalConfig) {
+    return new SendAndComplete(externalConfig);
 };

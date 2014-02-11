@@ -5,7 +5,7 @@ var SaveModule = function (page, HarFactory) {
     "use strict";
     var harString = HarFactory.harString(),
         execute = function () {
-            phantom.emit(harString);
+            phantom.emitData(harString);
         };
     return {
         execute: execute

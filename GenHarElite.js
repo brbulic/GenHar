@@ -25,7 +25,7 @@
 /* Real application begins */
 
 var system = require('system'),
-    HarFactory = require("./HarFactory").createNew(),
+    HarFactory,
     Utilities = require("./Utilities");
 
 var startingAddress = null,
@@ -156,41 +156,52 @@ var renderAndMeasurePage = function (measuredUrl) {
                 renderAndMeasurePage(redirectAddress);
             }
         } else {
-            console.log("Loading done! Waiting for all elements to finish...");
             page.endTime = new Date();
             page.title = page.evaluate(function () {
                 return document.title;
             });
 
-            setTimeout(function () {
+            if (userConfig.fullSpeed) {
+                console.log("Loading done! Waiting for all elements to finish...");
+                setTimeout(function () {
+                    timer = setInterval(function () {
+                        var lastDelta = lastElementCount - currentlyLoadingElements;
+                        if (lastDelta === 0) {
+                            deltasZeroCount = deltasZeroCount + 1;
+                        } else {
+                            deltasZeroCount = 0;
+                        }
 
-                timer = setInterval(function () {
-                    var lastDelta = lastElementCount - currentlyLoadingElements;
-                    if (lastDelta === 0) {
-                        deltasZeroCount = deltasZeroCount + 1;
-                    } else {
-                        deltasZeroCount = 0;
-                    }
+                        lastElementCount = currentlyLoadingElements;
 
-                    lastElementCount = currentlyLoadingElements;
+                        console.log("Currently loading elements: " + currentlyLoadingElements);
+                        console.log("Completed Delta: " + lastDelta);
 
-                    console.log("Currently loading elements: " + currentlyLoadingElements);
-                    console.log("Completed Delta: " + lastDelta);
+                        if (currentlyLoadingElements <= 0 || deltasZeroCount > 30) {
+                            clearInterval(timer);
 
-                    if (currentlyLoadingElements <= 0 || deltasZeroCount > 30) {
-                        clearInterval(timer);
+                            HarFactory.populateFromWebPage(page);
+                            page.close();
 
-                        HarFactory.populateFromWebPage(page);
-                        page.close();
+                            var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                            SaveModule.execute();
 
-                        var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
-                        SaveModule.execute();
+                            console.log("All done! Thanks!");
+                            phantom.exit();
+                        }
+                    }, 1000);
+                }, 2500);
+            } else {
+                console.log("Loading done! Saving it all...");
+                HarFactory.populateFromWebPage(page);
+                page.close();
 
-                        phantom.exit();
+                var SaveModule = require("./SaveModuleDesktop").createNew(page, HarFactory);
+                SaveModule.execute();
 
-                    }
-                }, 1000);
-            }, 2500);
+                console.log("All done! Thanks!");
+                phantom.exit();
+            }
         }
     });
 };
@@ -218,8 +229,14 @@ if (system.args.length === 1) {
     if (argsLength === 3) {
         userConfig = JSON.parse(system.args[2]);
     } else {
-        userConfig = {};
+        userConfig = {
+            fullHeader : true,
+            fullSpeed: true
+        };
     }
 
+    console.log("Settings :\n" + JSON.stringify(userConfig, undefined, 1));
+
+    HarFactory = require("./HarFactory").createNew(userConfig);
     renderAndMeasurePage(startingAddress);
 }
