@@ -5,7 +5,11 @@ var SaveModule = function (page, HarFactory) {
     "use strict";
     var harString = HarFactory.harString(),
         execute = function () {
-            phantom.emitData(harString);
+            if (HarFactory === null && HarFactory === undefined) {
+                phantom.emitData("FAILED");
+            } else {
+                phantom.emitData(harString);
+            }
         };
     return {
         execute: execute
