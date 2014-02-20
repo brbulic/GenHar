@@ -24,202 +24,81 @@
 
 /* Real application begins */
 
+
 var system = require('system'),
-    HarFactory,
-    Utilities = require("./Utilities");
-
-var startingAddress = null,
-    redirectAddress = null,
     userConfig = null,
-    isRedirect = null;
+    PhantomConfig = require("./PhantomConfig"),
+    PageLoaderProto = require("./PageLoader");
 
-var currentlyLoadingElements = 0;
-var lastElementCount = 0;
-var deltasZeroCount = 0;
-
-var renderAndMeasurePage = function (measuredUrl) {
-    'use strict';
-
-    var page = require('webpage').create(),
-        result = Utilities.marlinHeadersSetup(userConfig),
-        timer = null;
-
-    isRedirect = false;
-
-    page.address = measuredUrl;
-    page.resources = [];
-    page.rends = [];
-    page.nrend = 0;
-    page.startTime = 0;
-
-    if (result !== null && result.length > 0) {
-        page.customHeaders = {
-            'HTTP_X_MARLIN_MOBILE': result
-        };
-    }
-
-    page.onLoadStarted = function () {
-        if (page.startTime === undefined) {
-            page.startTime = new Date();
-        }
-        console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
-    };
-
-    page.onResourceError = function (resourceError) {
-        console.log('Unable to load resource (URL:' + resourceError.url + ')');
-        console.log('Error code: ' + resourceError.errorCode + '. Description: ' + resourceError.errorString);
-        page.resources[resourceError.id].startReply = null;
-        currentlyLoadingElements = currentlyLoadingElements - 1;
-    };
-
-    page.onError = function (msg, trace) {
-        var msgStack = ['ERROR: ' + msg];
-        if (trace) {
-            msgStack.push('TRACE:');
-            trace.forEach(function (t) {
-                msgStack.push(' -> ' + t.file + ': ' + t.line + (t.function ? ' (in function "' + t.function + '")' : ''));
-            });
-        }
-        console.error(msgStack.join('\n'));
-    };
-
-    page.onRenderingComplete = function (rend) {
-        page.rends[page.nrend++] = rend;
-    };
-
-    page.onResourceRequested = function (req) {
-        if (page.firstResource < page.startTime) {
-            throw "First resource is not started BEFORE the browser start";
-        }
-        page.resources[req.id] = {
-            request: req,
-            startReply: req,
-            connected: null,
-            endReply: null
-        };
-        var requestUrl = req.url;
-        if (Utilities.isUrlStringValidUrl(requestUrl)) {
-            currentlyLoadingElements = currentlyLoadingElements + 1;
-        }
-    };
-
-    page.onResourceReceived = function (res) {
-
-        var pageResource = page.resources[res.id];
-
-        if (res.stage === 'connected') {
-            pageResource.connected = res;
-        }
-
-        if (res.stage === 'end') {
-            var url = page.resources[res.id].request.url;
-            if (Utilities.isUrlStringValidUrl(url)) {
-                currentlyLoadingElements = currentlyLoadingElements - 1;
-            }
-        }
-    };
-
-    page.onNavigationRequested = function (url, type, willNavigate, main) {
-        if (main && url !== page.address && page.startTime instanceof Date) {
-            page.endTime = new Date();
-            isRedirect = true;
-            console.log("Redirecting to url: " + url + " from: " + page.address);
-            redirectAddress = url;
-        }
-    };
-
-    page.startTime = new Date();
-    page.open(measuredUrl, function (status) {
-        if (status !== 'success') {
-            if (isRedirect === false) {
-                console.log("FAILED loading of url: " + startingAddress);
-                phantom.emitHar("FAILED");
-            } else {
-                console.log("This is a buggy redirect. Redirecting to page: " + redirectAddress);
-                HarFactory.populateFromWebPage(page);
-                page.close();
-                renderAndMeasurePage(redirectAddress);
-            }
-        } else {
-            page.endTime = new Date();
-            page.title = page.evaluate(function () {
-                return document.title;
-            });
-
-            if (userConfig.fullSpeed) {
-                console.log("Loading done! Waiting for all elements to finish...");
-                setTimeout(function () {
-                    timer = setInterval(function () {
-                        var lastDelta = lastElementCount - currentlyLoadingElements;
-                        if (lastDelta === 0) {
-                            deltasZeroCount = deltasZeroCount + 1;
-                        } else {
-                            deltasZeroCount = 0;
-                        }
-
-                        lastElementCount = currentlyLoadingElements;
-
-                        console.log("Currently loading elements: " + currentlyLoadingElements);
-                        console.log("Completed Delta: " + lastDelta);
-
-                        if (currentlyLoadingElements <= 0 || deltasZeroCount > 30) {
-                            clearInterval(timer);
-
-                            HarFactory.populateFromWebPage(page);
-                            page.close();
-
-                            var SaveModule = require("./SaveModuleMobile").createNew(page, HarFactory);
-                            SaveModule.execute();
-
-                            console.log("All done! Thanks!");
-                        }
-                    }, 1000);
-                }, 2500);
-            } else {
-                console.log("Loading done! Saving it all...");
-                HarFactory.populateFromWebPage(page);
-                page.close();
-
-                var SaveModule = require("./SaveModuleMobile").createNew(page, HarFactory);
-                SaveModule.execute();
-
-                console.log("All done! Thanks!");
-            }
-        }
-    });
-};
 
 if (system.args.length === 1) {
     console.log('Usage: genhar.js <some URL> [UAS]');
-    phantom.emitData('INVALID_ARGUMENTS');
+    PhantomConfig.Config.ExitModule.ExitPhantom(1);
+}
+
+phantom.onError = function (msg, trace) {
+    'use strict';
+    var msgStack = ['PHANTOM ERROR: ' + msg];
+    if (trace && trace.length) {
+        msgStack.push('TRACE:');
+        trace.forEach(function (t) {
+            msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
+        });
+    }
+    console.error(msgStack.join('\n'));
+    PhantomConfig.Config.ExitModule.ExitPhantom(1);
+};
+
+var startingAddress = system.args[1];
+
+var argsLength = system.args.length;
+if (argsLength === 3) {
+    userConfig = JSON.parse(system.args[2]);
 } else {
-    phantom.onError = function (msg, trace) {
-        'use strict';
-        var msgStack = ['PHANTOM ERROR: ' + msg];
-        if (trace && trace.length) {
-            msgStack.push('TRACE:');
-            trace.forEach(function (t) {
-                msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
-            });
-        }
-        console.error(msgStack.join('\n'));
-        phantom.exit(1);
+    userConfig = {
+        fullHeader: true,
+        fullSpeed: true
+    };
+}
+
+var HarFactory = require("./HarFactory").createNew(userConfig);
+
+var doMeasure = function (address) {
+    "use strict";
+    var PageLoader = PageLoaderProto.buildLoader(address, userConfig);
+
+    PageLoader.onError = function (result) {
+        console.log(result.message);
+
+        var saveModule = PhantomConfig.Config.SaveModule.createNew(PageLoader.page, null);
+        saveModule.execute();
+
+        PhantomConfig.Config.ExitModule.ExitPhantom();
     };
 
-    startingAddress = system.args[1];
+    PageLoader.onRedirect = function (result) {
+        console.log(result.message);
 
-    var argsLength = system.args.length;
-    if (argsLength === 3) {
-        userConfig = JSON.parse(system.args[2]);
-    } else {
-        userConfig = {
-            fullHeader : true,
-            fullSpeed: true
-        };
-    }
+        HarFactory.populateFromWebPage(PageLoader.page);
 
-    console.log("Settings :\n" + JSON.stringify(userConfig, undefined, 1));
+        doMeasure(result.data.redirectURL);
+    };
 
-    HarFactory = require("./HarFactory").createNew(userConfig);
-    renderAndMeasurePage(startingAddress);
-}
+    PageLoader.onFinished = function (result) {
+        console.log(result.message + " " + result.status);
+        HarFactory.populateFromWebPage(PageLoader.page);
+
+        var saveModule = PhantomConfig.Config.SaveModule.createNew(PageLoader.page, HarFactory);
+        saveModule.execute();
+
+        PhantomConfig.Config.ExitModule.ExitPhantom();
+    };
+
+    PageLoader.startMeasurement();
+};
+
+doMeasure(startingAddress);
+
+
+
+

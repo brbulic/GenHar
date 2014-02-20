@@ -3,10 +3,19 @@
  */
 var SaveModule = function (page, HarFactory) {
     "use strict";
-    var harString = HarFactory.harString(),
-        execute = function () {
+    var harString;
+
+    if (HarFactory !== null && HarFactory !== undefined) {
+        harString = HarFactory.harString();
+    }
+
+    var execute = function () {
+        if (!harString) {
+            phantom.emitData(0, "FAILED");
+        } else {
             phantom.emitData(1, harString);
-        };
+        }
+    };
     return {
         execute: execute
     };

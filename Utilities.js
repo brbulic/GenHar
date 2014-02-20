@@ -1,5 +1,5 @@
 var attachPreviousEntries = function (currentEntries, newEntries) {
-    'use strict';
+    "use strict";
 
     if (!(currentEntries instanceof Array)) {
         return;
@@ -10,9 +10,10 @@ var attachPreviousEntries = function (currentEntries, newEntries) {
     });
 };
 
+// Make sure that the Element has a valid, fetchable URL
 var isUrlStringValidUrl = function (requestUrl) {
     "use strict";
-    return (requestUrl.indexOf("http://") === 0 || requestUrl.indexOf("https://") === 0);
+    return (requestUrl.indexOf("://") === 0);
 };
 
 var marlinHeadersSetup = function (userAppConfig) {
@@ -33,7 +34,7 @@ var marlinHeadersSetup = function (userAppConfig) {
 };
 
 var createStatusFromResponse = function (response) {
-    'use strict';
+    "use strict";
 
     if (response === null) {
         return {
@@ -47,7 +48,7 @@ var createStatusFromResponse = function (response) {
         statusText = response.statusText || '';
 
     if (isError) {
-        console.log("Simun petar");
+        console.log("Response doesn't have an error code");
         status = response.errorCode;
         statusText = response.errorString;
     }

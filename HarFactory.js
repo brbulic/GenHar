@@ -231,5 +231,6 @@ var SendAndComplete = function (externalConfig) {
 }
 
 exports.createNew = function (externalConfig) {
+    "use strict";
     return new SendAndComplete(externalConfig);
 };
