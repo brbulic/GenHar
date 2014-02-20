@@ -9,27 +9,37 @@ var GenHarFactory = function (page, address, title, resources, config) {
 
     resources.forEach(function (resource) {
         var request = resource.request,
-            startReply = resource.startReply,
-            endReply = resource.endReply,
+            connected = resource.connected,
+            started = request.created,
             redirectUrl = "",
             fallbackBodySize = 0,
             bodySize,
-            statuses = Utilities.createStatusFromResponse(endReply),
+            contents = null,
             url = request.url;
 
-        if (!request || !startReply) {
+        if (!request || !connected) {
             return;
         }
 
-        if (!endReply) {
-            endReply = {
-                time : request.time,
-                unfinished : true,
-                headers : []
+        if (connected.compressedSize !== connected.bodySize) {
+            contents = {
+                compression: connected.compressedSize,
+                size: connected.bodySize,
+                mimeType: connected.contentType
             };
-            console.log("Element is unfinished with URL: " + url);
         } else {
-            endReply.unfinished = false;
+            contents = {
+                size: connected.bodySize,
+                mimeType: connected.contentType
+            };
+        }
+
+        if (connected.opened > request.created) {
+            started = connected.opened;
+        }
+
+        if (!started) {
+            console.log("Element is unfinished with URL: " + url);
         }
 
         var headers = [];
@@ -37,12 +47,12 @@ var GenHarFactory = function (page, address, title, resources, config) {
         if (useHeaders) {
             headers.push({
                 name : "UncompressedSize",
-                value : (endReply.bodySize || 0).toString()
+                value : (connected.bodySize || 0).toString()
             });
             var contentLengthHeader = null;
 
-            endReply.headers.forEach(function (element) {
-                if (endReply.status === 302 || endReply.status === 301) {
+            connected.headers.forEach(function (element) {
+                if (connected.status === 302 || connected.status === 301) {
                     if (element.name === "Location") {
                         redirectUrl = element.value;
                     }
@@ -51,8 +61,8 @@ var GenHarFactory = function (page, address, title, resources, config) {
                 if (element.name === "Content-Length") {
                     fallbackBodySize = parseInt(element.value, 10);
 
-                    if (endReply.bodySize) {
-                        element.value = (endReply.compressedSize).toString();
+                    if (contents.compression) {
+                        element.value = (contents.compression).toString();
                     }
 
                     contentLengthHeader = element;
@@ -64,7 +74,7 @@ var GenHarFactory = function (page, address, title, resources, config) {
             if (contentLengthHeader === null) {
                 var a = {
                     name : "Content-Length",
-                    value : (endReply.compressedSize || 0).toString()
+                    value : (contents.compression || 0).toString()
                 };
                 headers.push(a);
             }
@@ -74,7 +84,7 @@ var GenHarFactory = function (page, address, title, resources, config) {
             url = url.substring(0, 128);
         }
 
-        bodySize = endReply.compressedSize || (endReply.bodySize || 0);
+        bodySize = contents.compression || (contents.size || 0);
 
         if (bodySize === 0 || bodySize === undefined) {
             bodySize = fallbackBodySize;
@@ -84,7 +94,7 @@ var GenHarFactory = function (page, address, title, resources, config) {
         urlArray.push(request.url);
         entries.push({
             startedDateTime: request.time.toISOString(),
-            time: endReply.time - request.time,
+            time: connected.done - request.created,
             request: {
                 method: request.method,
                 url: url,
@@ -96,8 +106,8 @@ var GenHarFactory = function (page, address, title, resources, config) {
                 bodySize: -1
             },
             response: {
-                status: statuses.status,
-                statusText: statuses.statusText,
+                status: connected.status,
+                statusText: connected.statusText,
                 httpVersion: "HTTP/1.1",
                 cookies: [],
                 headers: headers,
@@ -106,19 +116,19 @@ var GenHarFactory = function (page, address, title, resources, config) {
                 bodySize: bodySize,
                 content: {
                     size: bodySize,
-                    uncompressedSize : endReply.bodySize || 0,
-                    mimeType: (endReply.contentType || '')
+                    uncompressedSize : contents.bodySize || 0,
+                    mimeType: (contents.mimeType || '')
                 }
             },
             cache: {},
             timings: {
-                blocked: 0,
-                dns: -1,
-                connect: -1,
-                send: 0,
-                wait: !endReply.unfinished ? (startReply.time - request.time) : 0,
-                receive: !endReply.unfinished ? (endReply.time - startReply.time) : 0,
-                ssl: -1
+                blocked: started - request.created,
+                dns: connected.resolved - started,
+                connect: connected.connected - connected.resolved,
+                send: connected.sent - connected.connected,
+                wait: connected.recv - connected.sent,
+                receive: connected.done - connected.recv,
+                ssl: connected.ssl
             },
             pageref: address
         });
@@ -154,7 +164,7 @@ var GenHarFactory = function (page, address, title, resources, config) {
                     id: address,
                     title: processedTitle,
                     pageTimings: {
-                        onLoad: page.endTime - page.firstResource,
+                        onLoad: page.endTime - page.startTime,
                         browserFirstLoad: page.firstResource - page.startTime,
                         onContentLoad: page.renderTime - page.startTime,
                         _st: page.startTime,
