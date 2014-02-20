@@ -6,8 +6,7 @@ var ExitModule = function () {
     "use strict";
 
     var ExitPhantom = function (number) {
-        number = number || 0;
-        phantom.exit(number);
+
     };
 
     return {
@@ -15,7 +14,7 @@ var ExitModule = function () {
     }
 };
 
-var SaveModule = require("./SaveModuleDesktop");
+var SaveModule = require("./SaveModuleMobile");
 var exitModule = new ExitModule();
 
 exports.Config = {

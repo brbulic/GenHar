@@ -28,7 +28,8 @@
 var system = require('system'),
     userConfig = null,
     PhantomConfig = require("./PhantomConfig"),
-    PageLoaderProto = require("./PageLoader");
+    PageLoaderProto = require("./PageLoader"),
+    startingAddress = null;
 
 
 if (system.args.length === 1) {
@@ -49,16 +50,21 @@ phantom.onError = function (msg, trace) {
     PhantomConfig.Config.ExitModule.ExitPhantom(1);
 };
 
-var startingAddress = system.args[1];
-
 var argsLength = system.args.length;
-if (argsLength === 3) {
-    userConfig = JSON.parse(system.args[2]);
-} else {
-    userConfig = {
-        fullHeader: true,
-        fullSpeed: true
-    };
+var browserData = JSON.parse(system.args[1]);
+
+if (argsLength === 2) {
+    startingAddress = browserData['url'];
+
+    userConfig = browserData['custom-data'];
+    if (!userConfig) {
+        userConfig = {
+            fullHeader: true,
+            fullSpeed: true
+        };
+    }
+
+    console.log("Using config: \n" + JSON.stringify(userConfig, undefined, 1));
 }
 
 var HarFactory = require("./HarFactory").createNew(userConfig);
