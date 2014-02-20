@@ -50,6 +50,7 @@ var renderAndMeasurePage = function (measuredUrl) {
     page.resources = [];
     page.rends = [];
     page.nrend = 0;
+    page.startTime = 0;
 
     if (result !== null && result.length > 0) {
         page.customHeaders = {
@@ -93,6 +94,7 @@ var renderAndMeasurePage = function (measuredUrl) {
         page.resources[req.id] = {
             request: req,
             startReply: req,
+            connected: null,
             endReply: null
         };
         var requestUrl = req.url;
@@ -105,30 +107,11 @@ var renderAndMeasurePage = function (measuredUrl) {
 
         var pageResource = page.resources[res.id];
 
-        if (res.stage === 'start') {
-            pageResource.startReply = res;
-            if (page.firstResource === undefined) {
-                page.firstResource = res.time;
-            }
+        if (res.stage === 'connected') {
+            pageResource.connected = res;
         }
-        if (res.stage === 'received') {
-            // only deduce elements if the resource has been received
-            var currentRes = page.resources[res.id];
-            currentRes.endReply = res;
-            if (currentRes.startReply === null) {
-                console.log("An element without startReply. ID:" + res.id);
-                if (res.contentType === null && res.headers.length === 0) {
-                    console.log("Eliminating element because it's something with error.");
-                    currentRes.startReply = null;
-                } else {
-                    currentRes.startReply = currentRes.request;
-                }
-            }
-        }
+
         if (res.stage === 'end') {
-            if (page.resources[res.id].endReply === null) {
-                page.resources[res.id].endReply = res;
-            }
             var url = page.resources[res.id].request.url;
             if (Utilities.isUrlStringValidUrl(url)) {
                 currentlyLoadingElements = currentlyLoadingElements - 1;
