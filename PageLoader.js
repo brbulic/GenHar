@@ -64,9 +64,6 @@ var PageLoader = function (measuredUrl, userConfig) {
     };
 
     page.onResourceRequested = function (req) {
-        if (page.firstResource < page.startTime) {
-            throw "First resource is not started BEFORE the browser start";
-        }
         page.resources[req.id] = {
             request: req,
             startReply: req,
@@ -89,10 +86,6 @@ var PageLoader = function (measuredUrl, userConfig) {
         if (res.stage === 'end') {
             var url = page.resources[res.id].request.url;
 
-            if (page.firstResource === undefined) {
-                page.firstResource = new Date();
-            }
-
             if (Utilities.isUrlStringValidUrl(url)) {
                 currentlyLoadingElements = currentlyLoadingElements - 1;
             }
@@ -108,11 +101,7 @@ var PageLoader = function (measuredUrl, userConfig) {
         }
     };
 
-    page.startTime = new Date();
-
     var startMeasurement = function () {
-        page.startTime = new Date();
-
         page.open(measuredUrl, function (status) {
             if (status !== 'success') {
                 if (isRedirect === false) {

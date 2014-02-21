@@ -165,7 +165,6 @@ var GenHarFactory = function (page, address, title, resources, config) {
                     title: processedTitle,
                     pageTimings: {
                         onLoad: page.endTime - page.startTime,
-                        browserFirstLoad: page.firstResource - page.startTime,
                         onContentLoad: page.renderTime - page.startTime,
                         _st: page.startTime,
                         _et: page.endTime
