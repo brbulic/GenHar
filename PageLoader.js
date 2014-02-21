@@ -1,6 +1,9 @@
 /**
  * Created by brbulic on 12/02/14.
  */
+
+/*global phantom: true, require: true, exports: true */
+
 var PageLoader = function (measuredUrl, userConfig) {
     'use strict';
 
@@ -85,6 +88,11 @@ var PageLoader = function (measuredUrl, userConfig) {
 
         if (res.stage === 'end') {
             var url = page.resources[res.id].request.url;
+
+            if (page.firstResource === undefined) {
+                page.firstResource = new Date();
+            }
+
             if (Utilities.isUrlStringValidUrl(url)) {
                 currentlyLoadingElements = currentlyLoadingElements - 1;
             }

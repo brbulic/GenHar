@@ -1,11 +1,12 @@
+/*global phantom: true, require: true, exports: true */
+
 var Utilities = require("./Utilities");
 
 var GenHarFactory = function (page, address, title, resources, config) {
     "use strict";
     var entries = [],
-        urlArray = [],
         processedTitle = title.length === 0 ? address : address + ' (' + title + ')',
-        useHeaders = config.fullHeader;
+        useHeaders = config.fullHar;
 
     resources.forEach(function (resource) {
         var request = resource.request,
@@ -91,7 +92,6 @@ var GenHarFactory = function (page, address, title, resources, config) {
             console.log("Body size is Zero or Undefined");
         }
 
-        urlArray.push(request.url);
         entries.push({
             startedDateTime: request.time.toISOString(),
             time: connected.done - request.created,
@@ -174,9 +174,6 @@ var GenHarFactory = function (page, address, title, resources, config) {
             ],
             entries: entries,
             _renderings: renderings
-        },
-        urls_for_dns: {
-            urlArray: urlArray
         }
     };
 };
@@ -187,7 +184,7 @@ var SendAndComplete = function (externalConfig) {
         previousPages = [],
         currentHar = null,
         config = {
-            fullHeader : externalConfig.fullHeader,
+            fullHar : externalConfig.fullHar,
             fullSpeed : externalConfig.fullSpeed
         };
 
@@ -228,7 +225,7 @@ var SendAndComplete = function (externalConfig) {
         harString : harString
 
     };
-}
+};
 
 exports.createNew = function (externalConfig) {
     "use strict";

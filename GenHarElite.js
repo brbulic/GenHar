@@ -54,12 +54,12 @@ var argsLength = system.args.length;
 var browserData = JSON.parse(system.args[1]);
 
 if (argsLength === 2) {
-    startingAddress = browserData['url'];
+    startingAddress = browserData.url;
 
     userConfig = browserData['custom-data'];
     if (!userConfig) {
         userConfig = {
-            fullHeader: true,
+            fullHar: true,
             fullSpeed: true
         };
     }
