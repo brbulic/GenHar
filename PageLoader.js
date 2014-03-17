@@ -23,6 +23,7 @@ var PageLoader = function (measuredUrl, userConfig) {
     page.resources = [];
     page.rends = [];
     page.nrend = 0;
+    page.startTime = new Date();
 
     page.settings.userAgent = userConfig.userAgent;
 
@@ -35,8 +36,9 @@ var PageLoader = function (measuredUrl, userConfig) {
     }
 
     page.onLoadStarted = function () {
-        if (page.startTime === undefined) {
-            page.startTime = new Date();
+        var loadStartedDate = new Date();
+        if (page.startTime > loadStartedDate) {
+            page.startTime = loadStartedDate;
         }
         console.log("Started loading " + measuredUrl + " on timestamp: " + page.startTime.toISOString());
     };

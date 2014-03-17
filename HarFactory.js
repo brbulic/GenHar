@@ -6,6 +6,10 @@ var GenHarFactory = function (page, address, title, resources, config) {
     "use strict";
     var entries = [],
         processedTitle = title.length === 0 ? address : address + ' (' + title + ')',
+        minreq = new Date(),
+        minresp = minreq,
+        maxreq = 0,
+        firstresp = 0,
         useHeaders = config.fullHar;
 
     resources.forEach(function (resource) {
@@ -33,6 +37,22 @@ var GenHarFactory = function (page, address, title, resources, config) {
                 size: connected.bodySize,
                 mimeType: connected.contentType
             };
+        }
+
+        if (request.created < minreq && request.created instanceof Date) {
+            minreq = (request.created instanceof (Date)) ? request.created : minreq;
+        }
+
+        if (connected.done > maxreq) {
+            maxreq = connected.done;
+        }
+
+        if (connected.recv < minresp) {
+            minresp = connected.recv;
+        }
+
+        if (firstresp === 0) {
+            firstresp = connected.done;
         }
 
         if (connected.opened > request.created) {
@@ -140,6 +160,11 @@ var GenHarFactory = function (page, address, title, resources, config) {
     } else {
         page.renderTime = page.endTime;
     }
+
+    if (minreq < page.startTime) {
+        page.startTime = minreq;
+    }
+
     page.rends.forEach(function (rend) {
         renderings.push({
             id: rend.id,
@@ -164,10 +189,12 @@ var GenHarFactory = function (page, address, title, resources, config) {
                     id: address,
                     title: processedTitle,
                     pageTimings: {
-                        onLoad: page.renderTime - page.startTime,
-                        onContentLoad: page.endTime - page.startTime,
-                        _st: page.startTime,
-                        _et: page.endTime
+                        _onFirstByte:   minresp - page.startTime,
+                        onContentLoad: firstresp - page.startTime,
+                        _onFirstPaint:  page.renderTime - page.startTime,
+                        _onInteractive: page.renderTime - page.startTime,
+                        onLoad:        maxreq - page.startTime,
+                        _onComplete:    page.endTime - page.startTime
                     }
                 }
             ],
